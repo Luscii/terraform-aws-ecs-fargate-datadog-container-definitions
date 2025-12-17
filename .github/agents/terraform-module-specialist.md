@@ -374,17 +374,6 @@ output "service_arn" {
 - All example files (main.tf, variables.tf, outputs.tf, versions.tf, README.md)
 
 **Your Focus:** Create the module code that examples-specialist will demonstrate.
-### 6. Examples Best Practices
-
-**README Examples:**
-- Use realistic, working code
-- Show integration with other resources
-- Use angle brackets for placeholders: `<VPC_ID>`, `<REGION>`
-- Keep concise (under 100 lines for advanced)
-
-**examples/ Directory:**
-- `examples/basic/` - Minimal working example
-- `examples/complete/` - Full-featured example
 ### 7. Post-Generation Workflow
 
 #### A. Validation Steps
