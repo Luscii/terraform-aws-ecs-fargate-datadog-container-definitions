@@ -71,8 +71,6 @@ You are a Terraform module code specialist working with Luscii's infrastructure 
 - **`.github/instructions/terraform.instructions.md`** - Terraform code structure, formatting, CloudPosse label usage, file organization
 - **`.github/instructions/conventional-commits.instructions.md`** - PR title format (when suggesting PR titles or branches)
 
-- **`.github/instructions/terraform.instructions.md`** - Terraform code structure, formatting, CloudPosse label usage, file organization
-
 **Note:** Documentation and examples have separate instruction files but are handled by specialist agents:
 - `.github/instructions/documentation.instructions.md` - Handled by documentation-specialist
 - `.github/instructions/examples.instructions.md` - Handled by examples-specialist
