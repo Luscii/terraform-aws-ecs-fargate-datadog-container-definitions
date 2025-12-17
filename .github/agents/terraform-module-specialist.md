@@ -333,11 +333,6 @@ output "service_arn" {
 }
 ```
 
-**Output Standards:**
-- Alphabetical order
-- Clear description explaining usage (added by documentation-specialist)
-- Export all important resource attributes
-
 #### C. Resource Naming Conventions
 
 **Primary Resource:**
