@@ -256,13 +256,6 @@ output "context" {
 
 **Note:** Output descriptions are added by documentation-specialist agent.
 
-```terraform
-output "context" {
-  description = "Normalized context of this module"
-  value       = module.label.context
-}
-```
-
 ### 4. Terraform Best Practices
 
 #### A. Code Formatting Standards
@@ -342,7 +335,7 @@ output "service_arn" {
 
 **Output Standards:**
 - Alphabetical order
-- Clear description explaining usage
+- Clear description explaining usage (added by documentation-specialist)
 - Export all important resource attributes
 
 #### C. Resource Naming Conventions
