@@ -56,11 +56,10 @@ You coordinate work across these specialist agents in sequence:
 - Creates main.tf, variables.tf, outputs.tf, versions.tf
 - Implements CloudPosse label integration
 - Creates resources with proper naming/tagging
-
-**Task Distribution**: Understand which work belongs to which specialist agent and coordinate their execution in the correct sequence.
 - Adds validation blocks
 - Does NOT create documentation or examples
 
+**Task Distribution**: Understand which work belongs to which specialist agent and coordinate their execution in the correct sequence.
 ### 2. documentation-specialist
 **Responsibility:** Module documentation
 - Creates README.md with structure and examples
