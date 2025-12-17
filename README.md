@@ -206,47 +206,71 @@ resource "aws_ecs_task_definition" "this" {
 
 ## Required IAM Permissions
 
-This module does not create IAM roles. You must provide IAM roles with the following permissions:
+This module provides IAM policy documents as outputs that you can use in your IAM roles.
+
+### Using Module-Generated IAM Policies
+
+The module exposes IAM policy documents through outputs:
+
+```hcl
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  dd_api_key_secret = {
+    arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
+  }
+  dd_service = "my-service"
+  dd_env     = "production"
+  
+  # Optional: Scope ECS permissions to specific cluster
+  ecs_cluster_arn = "arn:aws:ecs:us-east-1:123456789012:cluster/my-cluster"
+}
+
+# Merge Datadog policies into your task execution role
+data "aws_iam_policy_document" "task_execution_combined" {
+  source_policy_documents = [
+    module.datadog_containers.task_execution_role_policy_json,
+    # Add your other policy documents here
+  ]
+}
+
+resource "aws_iam_role_policy" "task_execution" {
+  name   = "task-execution-policy"
+  role   = aws_iam_role.task_execution.id
+  policy = data.aws_iam_policy_document.task_execution_combined.json
+}
+
+# Merge Datadog policies into your task role
+data "aws_iam_policy_document" "task_combined" {
+  source_policy_documents = [
+    module.datadog_containers.task_role_policy_json,
+    # Add your other policy documents here
+  ]
+}
+
+resource "aws_iam_role_policy" "task" {
+  name   = "task-policy"
+  role   = aws_iam_role.task.id
+  policy = data.aws_iam_policy_document.task_combined.json
+}
+```
 
 ### Task Execution Role
 
 The task execution role must have:
 - AWS managed policy: `AmazonECSTaskExecutionRolePolicy`
-- Permission to access the Datadog API key secret (if using `dd_api_key_secret`):
+- Permission to access the Datadog API key secret (if using `dd_api_key_secret`)
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["secretsmanager:GetSecretValue"],
-      "Resource": ["arn:aws:secretsmanager:REGION:ACCOUNT:secret:datadog-api-key-*"]
-    }
-  ]
-}
-```
+The module's `task_execution_role_policy_json` output includes:
+- **DatadogGetSecretValue** (SID): Permission to get the Datadog API key from Secrets Manager (only if `dd_api_key_secret` is provided)
 
 ### Task Role
 
-The task role must have permissions for the Datadog agent to access ECS metadata:
+The task role must have permissions for the Datadog agent to access ECS metadata.
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ecs:ListClusters",
-        "ecs:ListContainerInstances",
-        "ecs:DescribeContainerInstances"
-      ],
-      "Resource": ["*"]
-    }
-  ]
-}
-```
+The module's `task_role_policy_json` output includes:
+- **DatadogECSMetadataAccess** (SID): Permissions to list and describe ECS resources
+- **DatadogECSTaskDescribe** (SID): Permissions to describe tasks (only if `ecs_cluster_arn` is provided, for scoped access)
 
 ## Configuration
 
@@ -260,7 +284,9 @@ The task role must have permissions for the Datadog agent to access ECS metadata
 
 ### Providers
 
-No providers.
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.26.0 |
 
 ### Modules
 
@@ -268,7 +294,10 @@ No modules.
 
 ### Resources
 
-No resources.
+| Name | Type |
+|------|------|
+| [aws_iam_policy_document.task_execution_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.task_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
 ### Inputs
 
@@ -297,6 +326,7 @@ No resources.
 | <a name="input_dd_site"></a> [dd\_site](#input\_dd\_site) | Datadog Site | `string` | `"datadoghq.com"` | no |
 | <a name="input_dd_tags"></a> [dd\_tags](#input\_dd\_tags) | Datadog Agent global tags (eg. `key1:value1, key2:value2`) | `string` | `null` | no |
 | <a name="input_dd_version"></a> [dd\_version](#input\_dd\_version) | The task version name. Used for tagging (UST) | `string` | `null` | no |
+| <a name="input_ecs_cluster_arn"></a> [ecs\_cluster\_arn](#input\_ecs\_cluster\_arn) | ARN of the ECS cluster. When provided, IAM policies will be scoped to this cluster. If not provided, policies will use wildcard resources. | `string` | `null` | no |
 | <a name="input_runtime_platform"></a> [runtime\_platform](#input\_runtime\_platform) | Configuration for `runtime_platform` that containers in your task may use | <pre>object({<br/>    cpu_architecture        = optional(string, "X86_64")<br/>    operating_system_family = optional(string, "LINUX")<br/>  })</pre> | <pre>{<br/>  "cpu_architecture": "X86_64",<br/>  "operating_system_family": "LINUX"<br/>}</pre> | no |
 
 ### Outputs
@@ -308,4 +338,6 @@ No resources.
 | <a name="output_datadog_containers_json"></a> [datadog\_containers\_json](#output\_datadog\_containers\_json) | All Datadog-related container definitions as a JSON-encoded string. Use this if you need a pre-encoded JSON string. |
 | <a name="output_datadog_cws_container"></a> [datadog\_cws\_container](#output\_datadog\_cws\_container) | The Datadog Cloud Workload Security instrumentation container definition as a list of objects (empty list if CWS is disabled) |
 | <a name="output_datadog_log_router_container"></a> [datadog\_log\_router\_container](#output\_datadog\_log\_router\_container) | The Datadog Log Router (Fluent Bit) container definition as a list of objects (empty list if log collection is disabled) |
+| <a name="output_task_execution_role_policy_json"></a> [task\_execution\_role\_policy\_json](#output\_task\_execution\_role\_policy\_json) | IAM policy document JSON for the task execution role. Include this in your task execution role to grant access to Datadog secrets. Returns empty string if no secret is configured. |
+| <a name="output_task_role_policy_json"></a> [task\_role\_policy\_json](#output\_task\_role\_policy\_json) | IAM policy document JSON for the task role. Include this in your task role to grant Datadog agent access to ECS metadata. |
 <!-- END_TF_DOCS -->

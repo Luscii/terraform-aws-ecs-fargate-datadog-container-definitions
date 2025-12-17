@@ -314,3 +314,13 @@ variable "runtime_platform" {
     cpu_architecture        = "X86_64"
   }
 }
+
+################################################################################
+# IAM Policy Configuration
+################################################################################
+
+variable "ecs_cluster_arn" {
+  description = "ARN of the ECS cluster. When provided, IAM policies will be scoped to this cluster. If not provided, policies will use wildcard resources."
+  type        = string
+  default     = null
+}

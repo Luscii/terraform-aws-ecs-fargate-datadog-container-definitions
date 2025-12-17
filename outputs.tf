@@ -27,3 +27,17 @@ output "datadog_containers_json" {
   description = "All Datadog-related container definitions as a JSON-encoded string. Use this if you need a pre-encoded JSON string."
   value       = jsonencode(local.datadog_containers)
 }
+
+################################################################################
+# IAM Policy Outputs
+################################################################################
+
+output "task_execution_role_policy_json" {
+  description = "IAM policy document JSON for the task execution role. Include this in your task execution role to grant access to Datadog secrets. Returns empty string if no secret is configured."
+  value       = var.dd_api_key_secret != null ? data.aws_iam_policy_document.task_execution_role.json : ""
+}
+
+output "task_role_policy_json" {
+  description = "IAM policy document JSON for the task role. Include this in your task role to grant Datadog agent access to ECS metadata."
+  value       = data.aws_iam_policy_document.task_role.json
+}
