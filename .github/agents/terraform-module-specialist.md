@@ -400,7 +400,7 @@ output "service_arn" {
    - [ ] 2-space indentation consistent
    - [ ] `=` signs aligned in consecutive arguments
    - [ ] Variables alphabetical (`context` first, then `name`)
-   - [ ] Outputs alphabetical w`.github/instructions/terraform.instructions.md`
+   - [ ] Outputs alphabetical
    - [ ] CloudPosse label module integrated correctly (v0.25.0)
    - [ ] All required code files present (main.tf, variables.tf, outputs.tf, versions.tf)
 
