@@ -385,16 +385,8 @@ output "service_arn" {
    - [ ] `=` signs aligned in consecutive arguments
    - [ ] Variables alphabetical (`context` first, then `name`)
    - [ ] Outputs alphabetical
-   - [ ] CloudPosse label module integrated correctly (v0.25.0)
-   - [ ] All required code files present (main.tf, variables.tf, outputs.tf, versions.tf)
-
-2. **Code Quality:**
-   - [ ] 2-space indentation consistent
-   - [ ] `=` signs aligned in consecutive arguments
-   - [ ] Variables alphabetical (`context` first, then `name`)
-   - [ ] Outputs alphabetical
    - [ ] Resource names follow conventions (`this` for primary)
-
+   - [ ] All required code files present (main.tf, variables.tf, outputs.tf, versions.tf)
 3. **Code Functionality:**
    - [ ] All resources use module.label.id for naming
    - [ ] All resources use module.label.tags for tagging
