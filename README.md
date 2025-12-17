@@ -1,42 +1,24 @@
 # terraform-aws-ecs-fargate-datadog-container-definitions
 
-Terraform module for generating ECS Fargate Datadog container definitions.
+Module providing Datadog container definitions for ECS Fargate tasks.
 
-## Overview
+## Examples
 
-This module provides **only Datadog-related container definitions** for ECS Fargate tasks with Datadog Agent, log collection, and Cloud Workload Security (CWS) support. Based on DataDog's official [terraform-aws-ecs-datadog](https://github.com/DataDog/terraform-aws-ecs-datadog) module v1.0.6.
-
-**Key Difference**: Unlike the full DataDog module which creates a complete ECS task definition resource, this module **only outputs the Datadog container definitions**. You combine these with your own application containers to create your task definition.
-
-## Features
-
-- 🔍 **Datadog Agent**: Automatic setup with configurable resources and health checks
-- 📊 **APM & DogStatsD**: Unix domain socket or UDP port configuration
-- 📝 **Log Collection**: Optional Fluent Bit integration for log forwarding
-- 🔐 **CWS**: Cloud Workload Security instrumentation
-- 🏷️ **UST**: Unified Service Tagging support
-
-## Usage
-
-### Basic Example
+### Minimal Setup
 
 ```hcl
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  # Datadog configuration
   dd_api_key_secret = {
     arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
   }
-  dd_site = "datadoghq.com"
-
-  # Unified Service Tagging
+  
   dd_service = "my-service"
   dd_env     = "production"
-  dd_version = "1.0.0"
 }
 
-# Define your application containers
+# Define your application containers with Datadog integration
 locals {
   app_containers = [
     {
@@ -45,22 +27,15 @@ locals {
       cpu       = 256
       memory    = 512
       essential = true
-      portMappings = [
-        {
-          containerPort = 8080
-          protocol      = "tcp"
-        }
-      ]
+      
       environment = [
-        {
-          name  = "DD_TRACE_AGENT_URL"
-          value = "unix:///var/run/datadog/apm.socket"
-        },
-        {
-          name  = "DD_DOGSTATSD_URL"
-          value = "unix:///var/run/datadog/dsd.socket"
-        }
+        { name = "DD_TRACE_AGENT_URL", value = "unix:///var/run/datadog/apm.socket" },
+        { name = "DD_DOGSTATSD_URL", value = "unix:///var/run/datadog/dsd.socket" },
+        { name = "DD_ENV", value = "production" },
+        { name = "DD_SERVICE", value = "my-service" },
+        { name = "DD_VERSION", value = "1.0.0" }
       ]
+      
       mountPoints = [
         {
           containerPath = "/var/run/datadog"
@@ -68,12 +43,19 @@ locals {
           readOnly      = false
         }
       ]
+      
       dependsOn = [
         {
           containerName = "datadog-agent"
           condition     = "HEALTHY"
         }
       ]
+      
+      dockerLabels = {
+        "com.datadoghq.tags.env"     = "production"
+        "com.datadoghq.tags.service" = "my-service"
+        "com.datadoghq.tags.version" = "1.0.0"
+      }
     }
   ]
 }
@@ -87,22 +69,21 @@ resource "aws_ecs_task_definition" "this" {
   memory                   = 1024
   execution_role_arn       = aws_iam_role.execution.arn
   task_role_arn            = aws_iam_role.task.arn
-
+  
   container_definitions = jsonencode(
     concat(
       module.datadog_containers.datadog_containers,
       local.app_containers
     )
   )
-
-  # Required volume for Datadog sockets
+  
   volume {
     name = "dd-sockets"
   }
 }
 ```
 
-### Example with Log Collection
+### Advanced Setup with Log Collection and CWS
 
 ```hcl
 module "datadog_containers" {
@@ -111,7 +92,11 @@ module "datadog_containers" {
   dd_api_key_secret = {
     arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
   }
-
+  
+  dd_service = "my-service"
+  dd_env     = "production"
+  dd_version = "1.0.0"
+  
   # Enable log collection
   dd_log_collection = {
     enabled = true
@@ -124,53 +109,14 @@ module "datadog_containers" {
       }
     }
   }
-
-  dd_service = "my-service"
-  dd_env     = "production"
-}
-
-locals {
-  app_containers = [
-    {
-      name      = "my-app"
-      image     = "my-app:latest"
-      cpu       = 256
-      memory    = 512
-      essential = true
-    }
-  ]
-}
-
-resource "aws_ecs_task_definition" "this" {
-  family                   = "my-app"
-  container_definitions    = jsonencode(
-    concat(
-      module.datadog_containers.datadog_containers,
-      local.app_containers
-    )
-  )
-  # ... other configuration
-}
-```
-
-### Example with Cloud Workload Security (CWS)
-
-```hcl
-module "datadog_containers" {
-  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
-
-  dd_api_key_secret = {
-    arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
-  }
-
+  
   # Enable CWS
   dd_cws = {
     enabled          = true
     cpu              = 128
     memory_limit_mib = 256
   }
-
-  # Required for CWS stability
+  
   dd_is_datadog_dependency_enabled = true
 }
 
@@ -183,6 +129,15 @@ locals {
       memory     = 512
       essential  = true
       entryPoint = ["/usr/local/bin/docker-entrypoint.sh"]
+      
+      environment = [
+        { name = "DD_TRACE_AGENT_URL", value = "unix:///var/run/datadog/apm.socket" },
+        { name = "DD_DOGSTATSD_URL", value = "unix:///var/run/datadog/dsd.socket" },
+        { name = "DD_ENV", value = "production" },
+        { name = "DD_SERVICE", value = "my-service" },
+        { name = "DD_VERSION", value = "1.0.0" }
+      ]
+      
       mountPoints = [
         {
           containerPath = "/var/run/datadog"
@@ -195,6 +150,7 @@ locals {
           readOnly      = false
         }
       ]
+      
       dependsOn = [
         {
           containerName = "datadog-agent"
@@ -205,174 +161,46 @@ locals {
           condition     = "SUCCESS"
         }
       ]
+      
       linuxParameters = {
         capabilities = {
           add  = ["SYS_PTRACE"]
           drop = []
         }
       }
+      
+      dockerLabels = {
+        "com.datadoghq.tags.env"     = "production"
+        "com.datadoghq.tags.service" = "my-service"
+        "com.datadoghq.tags.version" = "1.0.0"
+      }
     }
   ]
 }
 
 resource "aws_ecs_task_definition" "this" {
-  family                = "my-app"
+  family                   = "my-app"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 512
+  memory                   = 1024
+  execution_role_arn       = aws_iam_role.execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+  
   container_definitions = jsonencode(
     concat(
       module.datadog_containers.datadog_containers,
       local.app_containers
     )
   )
-
-  # Required volumes
+  
   volume {
     name = "dd-sockets"
   }
+  
   volume {
     name = "cws-instrumentation-volume"
   }
-  # ... other configuration
-}
-```
-
-## Important Notes
-
-### API Key Configuration
-
-You must provide **either** `dd_api_key` (plaintext) **or** `dd_api_key_secret` (AWS Secrets Manager), but not both:
-
-```hcl
-# Option 1: Use Secrets Manager (recommended)
-dd_api_key_secret = {
-  arn = "arn:aws:secretsmanager:region:account:secret:name"
-}
-
-# Option 2: Use plaintext (not recommended for production)
-dd_api_key = "your-datadog-api-key"
-```
-
-### IAM Permissions Required
-
-Since this module doesn't create IAM resources, you must ensure your task execution and task roles have the necessary permissions:
-
-**Task Execution Role** (if using `dd_api_key_secret`):
-```hcl
-data "aws_iam_policy_document" "execution_role_policy" {
-  statement {
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = [var.dd_api_key_secret.arn]
-  }
-}
-```
-
-**Task Role** (for Datadog Agent):
-```hcl
-data "aws_iam_policy_document" "task_role_policy" {
-  statement {
-    actions = [
-      "ecs:ListClusters",
-      "ecs:ListContainerInstances",
-      "ecs:DescribeContainerInstances"
-    ]
-    resources = ["*"]
-  }
-}
-```
-
-### Platform Compatibility
-
-- **Log Collection**: Only supported on Linux containers
-- **Read-only Root Filesystem**: Only supported on Linux containers
-- **CWS**: Only supported on Linux containers
-
-## Module Outputs
-
-The module provides the following outputs:
-
-- `datadog_agent_container` - List containing the Datadog Agent container definition (and init-volume if read-only root filesystem is enabled)
-- `datadog_log_router_container` - List containing the log router container (empty if log collection disabled)
-- `datadog_cws_container` - List containing the CWS instrumentation container (empty if CWS disabled)
-- `datadog_containers` - Combined list of all Datadog containers (recommended for most use cases)
-- `datadog_containers_json` - JSON-encoded string of all Datadog containers
-
-## Integrating with Your Application Containers
-
-When using this module, you need to manually add Datadog integration to your application containers:
-
-### Required Configuration for APM/DogStatsD
-
-Add to your application containers:
-
-```hcl
-{
-  # Your app container config
-  environment = [
-    {
-      name  = "DD_TRACE_AGENT_URL"
-      value = "unix:///var/run/datadog/apm.socket"
-    },
-    {
-      name  = "DD_DOGSTATSD_URL"
-      value = "unix:///var/run/datadog/dsd.socket"
-    },
-    # Unified Service Tagging
-    {
-      name  = "DD_ENV"
-      value = var.environment
-    },
-    {
-      name  = "DD_SERVICE"
-      value = var.service_name
-    },
-    {
-      name  = "DD_VERSION"
-      value = var.version
-    }
-  ]
-  mountPoints = [
-    {
-      containerPath = "/var/run/datadog"
-      sourceVolume  = "dd-sockets"
-      readOnly      = false
-    }
-  ]
-  dependsOn = [
-    {
-      containerName = "datadog-agent"
-      condition     = "HEALTHY"
-    }
-  ]
-  dockerLabels = {
-    "com.datadoghq.tags.env"     = var.environment
-    "com.datadoghq.tags.service" = var.service_name
-    "com.datadoghq.tags.version" = var.version
-  }
-}
-```
-
-### Required Task Definition Volumes
-
-Add to your task definition:
-
-```hcl
-volume {
-  name = "dd-sockets"
-}
-
-# If using CWS:
-volume {
-  name = "cws-instrumentation-volume"
-}
-
-# If using read-only root filesystem:
-volume {
-  name = "agent-config"
-}
-volume {
-  name = "agent-tmp"
-}
-volume {
-  name = "agent-run"
 }
 ```
 
@@ -437,17 +265,3 @@ No resources.
 | <a name="output_datadog_cws_container"></a> [datadog\_cws\_container](#output\_datadog\_cws\_container) | The Datadog Cloud Workload Security instrumentation container definition as a list of objects (empty list if CWS is disabled) |
 | <a name="output_datadog_log_router_container"></a> [datadog\_log\_router\_container](#output\_datadog\_log\_router\_container) | The Datadog Log Router (Fluent Bit) container definition as a list of objects (empty list if log collection is disabled) |
 <!-- END_TF_DOCS -->
-
-## Source Attribution
-
-This module is derived from DataDog's official Terraform module:
-- **Repository**: https://github.com/DataDog/terraform-aws-ecs-datadog
-- **Version**: v1.0.6
-- **Module**: `modules/ecs_fargate`
-- **License**: Apache License Version 2.0
-
-See `.github/instructions/module-overview.instructions.md` for detailed information about updating this module.
-
-## License
-
-Apache License Version 2.0. See LICENSE file for details.
