@@ -499,7 +499,7 @@ Hand off to **examples-specialist** agent:
 7. Run all validation and testing steps
 8. Ensure compliance with all Luscii standards
 
-## 9. Related Documentation
+## 10. Related Documentation
 
 - [Luscii Terraform Standards](.github/instructions/terraform.instructions.md)
 - [Documentation Guidelines](.github/instructions/documentation.instructions.md)
