@@ -140,7 +140,9 @@ You coordinate work across these specialist agents in sequence:
 
 **Goal:** Thoroughly evaluate the current state and requirements.
 
-**Activities:**.tf files needed for terraform-module-specialist
+**Activities:**
+
+1. **.tf Files** - .tf files needed for terraform-module-specialist
 2. **Module Sources** - Which Luscii modules to use, provider versions
 3. **Naming/Tagging** - CloudPosse label module integration (v0.25.0)
 4. **Variables** - Required and optional inputs with validation
@@ -154,7 +156,7 @@ You coordinate work across these specialist agents in sequence:
 - Clearly identify which tasks belong to which agent
 - Specify the sequence of agent execution
 - Define dependencies between agents
-- Provide each agent with specific, focused instruct
+- Provide each agent with specific, focused instructions
 - Assess the complexity and scope of the requested changes
 
 **Analysis Checklist:**
@@ -484,7 +486,10 @@ Hand off to **examples-specialist** agent:
 1. **terraform-module-specialist** - Implement core module code first
 2. **documentation-specialist** - Document the implemented module
 3. **examples-specialist** - Create runnable examples
-4. **Validation** - Run all validation and testing step
+4. **Validation** - Run all validation and testing steps
+
+### Overall Checklist
+
 1. Read all relevant `.github/instructions/*.instructions.md` files
 2. Follow this implementation plan task-by-task
 3. Create all required files with proper structure
@@ -583,7 +588,7 @@ Plans can have the following statuses:
 
 ### When Facing Complexity
 
-1. **Break Down Problems**: Divide complex requirements into phases and and coordinate agents
+1. **Break Down Problems**: Divide complex requirements into phases and coordinate agents
 2. **Always read instruction files** - Plans must incorporate Luscii standards
 3. **Understand agent capabilities** - Know what each specialist agent does
 4. **Coordinate in sequence** - terraform-module-specialist → documentation-specialist → examples-specialist
