@@ -3,9 +3,9 @@ output "task_definition_arn" {
   value       = aws_ecs_task_definition.this.arn
 }
 
-output "container_definitions" {
-  description = "The container definitions JSON"
-  value       = module.datadog_container_definitions.container_definitions
+output "datadog_containers" {
+  description = "The Datadog container definitions"
+  value       = module.datadog_container_definitions.datadog_containers
 }
 
 output "execution_role_arn" {

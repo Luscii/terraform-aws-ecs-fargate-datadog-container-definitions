@@ -188,62 +188,6 @@ locals {
     }
   ] : []
 
-  modified_container_definitions = [
-    for container in jsondecode(var.container_definitions) : merge(
-      container,
-      # Note: only configure CWS on container if entryPoint is set
-      {
-        # Append new environment variables to any existing ones.
-        environment = concat(
-          lookup(container, "environment", []),
-          local.dsd_socket_var,
-          local.apm_socket_var,
-          local.dsd_port_var,
-          local.ust_env_vars,
-          local.application_env_vars,
-        ),
-        # Merge UST docker labels with any existing docker labels.
-        dockerLabels = merge(
-          lookup(container, "dockerLabels", {}),
-          local.ust_docker_labels,
-        ),
-        # Append new volume mounts to any existing mountPoints.
-        mountPoints = concat(
-          lookup(container, "mountPoints", []),
-          local.apm_dsd_mount,
-          local.is_cws_supported && lookup(container, "entryPoint", []) != [] ? local.cws_mount : [],
-        )
-        dependsOn = concat(
-          lookup(container, "dependsOn", []),
-          local.agent_dependency,
-          local.log_router_dependency,
-          local.is_cws_supported && lookup(container, "entryPoint", []) != [] ? local.cws_dependency : [],
-        )
-      },
-      # Only override the log configuration if the Datadog firelens configuration exists
-      local.dd_firelens_log_configuration != null ? {
-        logConfiguration = local.dd_firelens_log_configuration
-      } : {},
-
-      # Only override CWS related configuration if the configuration is proper
-      local.is_cws_supported && lookup(container, "entryPoint", []) != [] ? {
-        entryPoint = concat(local.cws_entry_point_prefix, lookup(container, "entryPoint", []))
-      } : {},
-
-      local.is_cws_supported && lookup(container, "entryPoint", []) != [] ? {
-        # Note: SYS_PTRACE is the only linux capability available on Fargate
-        linuxParameters = {
-          capabilities = {
-            add = [
-              "SYS_PTRACE",
-            ]
-            drop = []
-          }
-        }
-      } : {},
-    )
-  ]
-
   # Datadog Agent container environment variables
   base_env = [
     {
@@ -455,11 +399,10 @@ locals {
     }
   ] : []
 
-  # Final container definitions output
-  container_definitions_list = concat(
+  # Final container definitions output - only Datadog containers
+  datadog_containers = concat(
     local.dd_agent_container,
     local.dd_log_container,
     local.dd_cws_container,
-    [for k, v in local.modified_container_definitions : v],
   )
 }

@@ -314,12 +314,3 @@ variable "runtime_platform" {
     cpu_architecture        = "X86_64"
   }
 }
-
-################################################################################
-# Container Definitions
-################################################################################
-
-variable "container_definitions" {
-  description = "A list of valid [container definitions](http://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDefinition.html). Please note that you should only provide values that are part of the container definition document"
-  type        = any
-}
