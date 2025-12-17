@@ -392,17 +392,6 @@ output "service_arn" {
 **examples/ Directory:**
 - `examples/basic/` - Minimal working example
 - `examples/complete/` - Full-featured example
-- `examples/{scenario}/` - Specific use cases
-
-**Each Example Needs:**
-- `main.tf` - Example configuration
-- `variables.tf` - Required variables
-- `outputs.tf` - Useful outputs
-- `versions.tf` - Version constraints
-- `README.md` - Purpose and usage
-
-**See `.github/instructions/examples.instructions.md` for detailed requirements.**
-
 ### 7. Post-Generation Workflow
 
 #### A. Validation Steps
