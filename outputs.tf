@@ -3,6 +3,10 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2025-present Datadog, Inc.
 
+################################################################################
+# Container Definition Outputs
+################################################################################
+
 output "datadog_agent_container" {
   description = "The Datadog Agent container definition as a list of objects (includes init-volume container if read-only root filesystem is enabled)"
   value       = local.dd_agent_container
@@ -41,4 +45,13 @@ output "task_execution_role_policy_json" {
 output "task_role_policy_json" {
   description = "IAM policy document JSON for the task role. Include this in your task role to grant Datadog agent access to ECS metadata."
   value       = data.aws_iam_policy_document.task_role.json
+}
+
+################################################################################
+# Context Output
+################################################################################
+
+output "context" {
+  description = "Context output from CloudPosse label module for passing to nested modules"
+  value       = module.label.context
 }

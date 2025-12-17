@@ -4,6 +4,17 @@
 # Copyright 2025-present Datadog, Inc.
 
 ################################################################################
+# CloudPosse Label Module for Resource Naming
+################################################################################
+
+module "label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  context = var.context
+}
+
+################################################################################
 # Datadog API Key Secret Management
 ################################################################################
 # Uses terraform-aws-service-secrets module to manage the Datadog API key
@@ -19,36 +30,28 @@ locals {
 }
 
 # Validation: API key must be provided when Datadog is enabled
-resource "null_resource" "validate_api_key" {
-  count = local.datadog_enabled && !local.has_dd_api_key ? 1 : 0
-
-  lifecycle {
-    precondition {
-      condition     = local.has_dd_api_key
-      error_message = "Datadog API key must be provided. Set var.dd_api_key with either 'value' (for new secret creation) or 'value_from_arn' (for existing secret)."
-    }
+check "validate_api_key" {
+  assert {
+    condition     = !local.datadog_enabled || local.has_dd_api_key
+    error_message = "Datadog API key must be provided. Set var.dd_api_key with either 'value' (for new secret creation) or 'value_from_arn' (for existing secret)."
   }
 }
 
 # Validation: UST variables must be provided when Datadog is enabled
-resource "null_resource" "validate_ust_variables" {
-  count = local.datadog_enabled ? 1 : 0
+check "validate_ust_variables" {
+  assert {
+    condition     = !local.datadog_enabled || var.dd_service != null
+    error_message = "var.dd_service is required when Datadog is enabled. This is used for Unified Service Tagging."
+  }
 
-  lifecycle {
-    precondition {
-      condition     = var.dd_service != null
-      error_message = "var.dd_service is required when Datadog is enabled. This is used for Unified Service Tagging."
-    }
+  assert {
+    condition     = !local.datadog_enabled || var.dd_env != null
+    error_message = "var.dd_env is required when Datadog is enabled. This is used for Unified Service Tagging."
+  }
 
-    precondition {
-      condition     = var.dd_env != null
-      error_message = "var.dd_env is required when Datadog is enabled. This is used for Unified Service Tagging."
-    }
-
-    precondition {
-      condition     = var.dd_version != null
-      error_message = "var.dd_version is required when Datadog is enabled. This is used for Unified Service Tagging."
-    }
+  assert {
+    condition     = !local.datadog_enabled || var.dd_version != null
+    error_message = "var.dd_version is required when Datadog is enabled. This is used for Unified Service Tagging."
   }
 }
 
@@ -56,25 +59,7 @@ resource "null_resource" "validate_ust_variables" {
 module "dd_api_key_secret" {
   source = "github.com/Luscii/terraform-aws-service-secrets?ref=1.2.1"
 
-  context = {
-    enabled             = local.has_dd_api_key
-    namespace           = null
-    tenant              = null
-    environment         = var.dd_env
-    stage               = null
-    name                = "datadog-api-key"
-    delimiter           = null
-    attributes          = []
-    tags                = {}
-    additional_tag_map  = {}
-    regex_replace_chars = null
-    label_order         = []
-    id_length_limit     = null
-    label_key_case      = null
-    label_value_case    = null
-    descriptor_formats  = {}
-    labels_as_tags      = ["unset"]
-  }
+  context = module.label.context
 
   kms_key_id = var.kms_key_id
 

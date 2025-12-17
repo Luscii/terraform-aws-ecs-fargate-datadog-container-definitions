@@ -261,20 +261,18 @@ The module's `task_role_policy_json` output includes:
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 6.26.0 |
-| <a name="provider_null"></a> [null](#provider\_null) | 3.2.4 |
 
 ### Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_dd_api_key_secret"></a> [dd\_api\_key\_secret](#module\_dd\_api\_key\_secret) | github.com/Luscii/terraform-aws-service-secrets | n/a |
+| <a name="module_dd_api_key_secret"></a> [dd\_api\_key\_secret](#module\_dd\_api\_key\_secret) | github.com/Luscii/terraform-aws-service-secrets | 1.2.1 |
+| <a name="module_label"></a> [label](#module\_label) | cloudposse/label/null | 0.25.0 |
 
 ### Resources
 
 | Name | Type |
 |------|------|
-| [null_resource.validate_api_key](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
-| [null_resource.validate_ust_variables](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
 | [aws_iam_policy_document.task_execution_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.task_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
@@ -283,6 +281,7 @@ The module's `task_role_policy_json` output includes:
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_container_mount_path_prefix"></a> [container\_mount\_path\_prefix](#input\_container\_mount\_path\_prefix) | Prefix path for container mount points. Datadog sockets will be mounted at this prefix + 'datadog'. | `string` | `"/var/run/"` | no |
+| <a name="input_context"></a> [context](#input\_context) | Single object for setting entire context at once.<br/>See description of individual variables for details.<br/>Leave string and numeric variables as `null` to use default value.<br/>Individual variable settings (non-null) override settings in context object,<br/>except for attributes, tags, and additional\_tag\_map, which are merged. | `any` | <pre>{<br/>  "additional_tag_map": {},<br/>  "attributes": [],<br/>  "delimiter": null,<br/>  "descriptor_formats": {},<br/>  "enabled": true,<br/>  "environment": null,<br/>  "id_length_limit": null,<br/>  "label_key_case": null,<br/>  "label_order": [],<br/>  "label_value_case": null,<br/>  "labels_as_tags": [<br/>    "unset"<br/>  ],<br/>  "name": null,<br/>  "namespace": null,<br/>  "regex_replace_chars": null,<br/>  "stage": null,<br/>  "tags": {},<br/>  "tenant": null<br/>}</pre> | no |
 | <a name="input_dd_api_key"></a> [dd\_api\_key](#input\_dd\_api\_key) | Datadog API Key configuration. Provide either 'value' for plaintext key or 'value\_from\_arn' for existing secret ARN. When neither is provided, a new secret will be created. | <pre>object({<br/>    value          = optional(string)<br/>    value_from_arn = optional(string)<br/>    description    = optional(string, "Datadog API Key")<br/>  })</pre> | `null` | no |
 | <a name="input_dd_apm"></a> [dd\_apm](#input\_dd\_apm) | Configuration for Datadog APM | <pre>object({<br/>    enabled                       = optional(bool, true)<br/>    socket_enabled                = optional(bool, true)<br/>    profiling                     = optional(bool, false)<br/>    trace_inferred_proxy_services = optional(bool, false)<br/>  })</pre> | <pre>{<br/>  "enabled": true,<br/>  "profiling": false,<br/>  "socket_enabled": true,<br/>  "trace_inferred_proxy_services": false<br/>}</pre> | no |
 | <a name="input_dd_checks_cardinality"></a> [dd\_checks\_cardinality](#input\_dd\_checks\_cardinality) | Datadog Agent checks cardinality | `string` | `null` | no |
@@ -318,6 +317,7 @@ The module's `task_role_policy_json` output includes:
 | <a name="output_container_docker_labels"></a> [container\_docker\_labels](#output\_container\_docker\_labels) | Map of Docker labels to add to application containers for Unified Service Tagging. Includes env, service, and version labels. |
 | <a name="output_container_environment_variables"></a> [container\_environment\_variables](#output\_container\_environment\_variables) | List of environment variables to add to application containers for Datadog integration. Includes DD\_TRACE\_AGENT\_URL, DD\_DOGSTATSD\_URL (if socket-based), and Unified Service Tagging variables. |
 | <a name="output_container_mount_points"></a> [container\_mount\_points](#output\_container\_mount\_points) | List of mount points to add to application containers for Datadog integration. Includes Datadog socket volume and CWS instrumentation volume (if enabled). |
+| <a name="output_context"></a> [context](#output\_context) | Context output from CloudPosse label module for passing to nested modules |
 | <a name="output_datadog_agent_container"></a> [datadog\_agent\_container](#output\_datadog\_agent\_container) | The Datadog Agent container definition as a list of objects (includes init-volume container if read-only root filesystem is enabled) |
 | <a name="output_datadog_containers"></a> [datadog\_containers](#output\_datadog\_containers) | All Datadog-related container definitions as a list of objects. Combine this with your application containers in your task definition. |
 | <a name="output_datadog_containers_json"></a> [datadog\_containers\_json](#output\_datadog\_containers\_json) | All Datadog-related container definitions as a JSON-encoded string. Use this if you need a pre-encoded JSON string. |
