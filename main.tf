@@ -403,6 +403,6 @@ locals {
   datadog_containers = concat(
     local.dd_agent_container,
     local.dd_log_container,
-    local.dd_cws_container,
+    local.dd_cws_container
   )
 }
