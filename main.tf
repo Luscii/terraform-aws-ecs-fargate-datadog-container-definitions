@@ -39,15 +39,14 @@ locals {
         var.dd_log_collection.fluentbit_config.log_driver_configuration.source_name != null ? { dd_source = var.dd_log_collection.fluentbit_config.log_driver_configuration.source_name } : {},
         var.dd_log_collection.fluentbit_config.log_driver_configuration.message_key != null ? { dd_message_key = var.dd_log_collection.fluentbit_config.log_driver_configuration.message_key } : {},
         var.dd_log_collection.fluentbit_config.log_driver_configuration.compress != null ? { compress = var.dd_log_collection.fluentbit_config.log_driver_configuration.compress } : {},
-        var.dd_tags != null ? { dd_tags = var.dd_tags } : {},
-        var.dd_api_key != null ? { apikey = var.dd_api_key } : {}
+        var.dd_tags != null ? { dd_tags = var.dd_tags } : {}
       )
     },
-    var.dd_api_key_secret != null ? {
+    local.dd_api_key_secret_arn != null ? {
       secretOptions = [
         {
           name      = "apikey"
-          valueFrom = var.dd_api_key_secret.arn
+          valueFrom = local.dd_api_key_secret_arn
         }
       ]
     } : {}
@@ -218,7 +217,6 @@ locals {
 
   dynamic_env = [
     for pair in [
-      { key = "DD_API_KEY", value = var.dd_api_key },
       { key = "DD_SITE", value = var.dd_site },
       { key = "DD_DOGSTATSD_TAG_CARDINALITY", value = var.dd_dogstatsd.dogstatsd_cardinality },
       { key = "DD_TAGS", value = var.dd_tags },
@@ -300,12 +298,7 @@ locals {
           memory       = var.dd_memory_limit_mib
 
           readonlyRootFilesystem = var.dd_readonly_root_filesystem
-          secrets = var.dd_api_key_secret != null ? [
-            {
-              name      = "DD_API_KEY"
-              valueFrom = var.dd_api_key_secret.arn
-            }
-          ] : []
+          secrets                = local.dd_api_key_container_secret
           portMappings = [
             {
               containerPort = 8125

@@ -8,27 +8,17 @@
 ################################################################################
 
 # Task Execution Role Policy - Access to Datadog API Key Secret
+# Uses the IAM policy document from the service-secrets module
 data "aws_iam_policy_document" "task_execution_role" {
-  # Only include this statement if dd_api_key_secret is provided
-  dynamic "statement" {
-    for_each = var.dd_api_key_secret != null ? [1] : []
-    content {
-      sid    = "DatadogGetSecretValue"
-      effect = "Allow"
-      actions = [
-        "secretsmanager:GetSecretValue"
-      ]
-      resources = [
-        var.dd_api_key_secret.arn
-      ]
-    }
-  }
+  # Include the policy from service-secrets module if it exists
+  source_policy_documents = compact([
+    module.dd_api_key_secret.iam_policy_document
+  ])
 }
 
 # Task Role Policy - ECS Metadata Access for Datadog Agent
 data "aws_iam_policy_document" "task_role" {
   # Statement for listing and describing ECS resources
-  # Only include if ecs_cluster_arn is provided, otherwise use "*" for resources
   statement {
     sid    = "DatadogECSMetadataAccess"
     effect = "Allow"
@@ -53,7 +43,10 @@ data "aws_iam_policy_document" "task_role" {
         "ecs:DescribeTasks",
         "ecs:ListTasks"
       ]
-      resources = [
+      # If task_definition_arn is provided, scope to specific task; otherwise scope to cluster
+      resources = var.ecs_task_definition_arn != null ? [
+        var.ecs_task_definition_arn
+        ] : [
         "${var.ecs_cluster_arn}/*"
       ]
     }

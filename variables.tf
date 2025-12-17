@@ -8,21 +8,33 @@
 ################################################################################
 
 variable "dd_api_key" {
-  description = "Datadog API Key"
-  type        = string
-  default     = null
+  description = "Datadog API Key configuration. Provide either 'value' for plaintext key or 'value_from_arn' for existing secret ARN. When neither is provided, a new secret will be created."
+  type = object({
+    value          = optional(string)
+    value_from_arn = optional(string)
+    description    = optional(string, "Datadog API Key")
+  })
+  sensitive = true
+  default   = null
+
+  validation {
+    condition     = var.dd_api_key == null || (var.dd_api_key.value == null || var.dd_api_key.value_from_arn == null)
+    error_message = "Only one of 'value' or 'value_from_arn' can be set, not both."
+  }
+
+  validation {
+    condition = var.dd_api_key == null ? true : (
+      var.dd_api_key.value_from_arn == null ? true :
+      can(regex("^arn:aws:secretsmanager:[a-zA-Z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9-_/]+-[a-zA-Z0-9]{6}$", var.dd_api_key.value_from_arn))
+    )
+    error_message = "The value_from_arn must be a valid Secrets Manager ARN with format: arn:aws:secretsmanager:region:account-id:secret:secret-name-suffix"
+  }
 }
 
-variable "dd_api_key_secret" {
-  description = "Datadog API Key Secret ARN"
-  type = object({
-    arn = string
-  })
-  default = null
-  validation {
-    condition     = var.dd_api_key_secret == null || try(var.dd_api_key_secret.arn != null, false)
-    error_message = "If 'dd_api_key_secret' is set, 'arn' must be a non-null string."
-  }
+variable "kms_key_id" {
+  description = "KMS Key identifier to encrypt Datadog API key secret if a new secret is created. Can be in any of the formats: Key ID, Key ARN, Alias Name, Alias ARN"
+  type        = string
+  default     = null
 }
 
 variable "dd_registry" {
@@ -313,6 +325,19 @@ variable "runtime_platform" {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
   }
+
+  validation {
+    condition = var.runtime_platform.operating_system_family == null || contains(
+      ["LINUX", "WINDOWS_SERVER_2019_FULL", "WINDOWS_SERVER_2019_CORE", "WINDOWS_SERVER_2022_FULL", "WINDOWS_SERVER_2022_CORE"],
+      var.runtime_platform.operating_system_family
+    )
+    error_message = "operating_system_family must be one of: LINUX, WINDOWS_SERVER_2019_FULL, WINDOWS_SERVER_2019_CORE, WINDOWS_SERVER_2022_FULL, WINDOWS_SERVER_2022_CORE"
+  }
+
+  validation {
+    condition     = var.runtime_platform.cpu_architecture == null || contains(["X86_64", "ARM64"], var.runtime_platform.cpu_architecture)
+    error_message = "cpu_architecture must be one of: X86_64, ARM64"
+  }
 }
 
 ################################################################################
@@ -321,6 +346,12 @@ variable "runtime_platform" {
 
 variable "ecs_cluster_arn" {
   description = "ARN of the ECS cluster. When provided, IAM policies will be scoped to this cluster. If not provided, policies will use wildcard resources."
+  type        = string
+  default     = null
+}
+
+variable "ecs_task_definition_arn" {
+  description = "ARN of the ECS task definition. When provided, task-specific IAM permissions will be scoped to this task definition. Use with ecs_cluster_arn for granular permissions."
   type        = string
   default     = null
 }

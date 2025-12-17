@@ -10,8 +10,8 @@ Module providing Datadog container definitions for ECS Fargate tasks.
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  dd_api_key_secret = {
-    arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
+  dd_api_key = {
+    value = "your-datadog-api-key"  # Or use value_from_arn for existing secret
   }
   
   dd_service = "my-service"
@@ -65,19 +65,38 @@ resource "aws_ecs_task_definition" "this" {
 }
 ```
 
+### Using Existing Secret
+
+```hcl
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  dd_api_key = {
+    value_from_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key-abc123"
+  }
+  
+  dd_service = "my-service"
+  dd_env     = "production"
+  dd_version = "1.0.0"
+}
+```
+
 ### Advanced Setup with Log Collection and CWS
 
 ```hcl
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  dd_api_key_secret = {
-    arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
+  dd_api_key = {
+    value = var.datadog_api_key
   }
   
   dd_service = "my-service"
   dd_env     = "production"
   dd_version = "1.0.0"
+  
+  # Optional: Use custom KMS key for secret encryption
+  kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
   
   # Enable log collection
   dd_log_collection = {
@@ -168,22 +187,26 @@ The module exposes IAM policy documents through outputs:
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  dd_api_key_secret = {
-    arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
+  dd_api_key = {
+    value_from_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
   }
   dd_service = "my-service"
   dd_env     = "production"
+  dd_version = "1.0.0"
   
   # Optional: Scope ECS permissions to specific cluster
   ecs_cluster_arn = "arn:aws:ecs:us-east-1:123456789012:cluster/my-cluster"
+  
+  # Optional: Scope task permissions to specific task definition
+  ecs_task_definition_arn = "arn:aws:ecs:us-east-1:123456789012:task-definition/my-task"
 }
 
 # Merge Datadog policies into your task execution role
 data "aws_iam_policy_document" "task_execution_combined" {
-  source_policy_documents = [
+  source_policy_documents = compact([
     module.datadog_containers.task_execution_role_policy_json,
     # Add your other policy documents here
-  ]
+  ])
 }
 
 resource "aws_iam_role_policy" "task_execution" {
@@ -211,10 +234,9 @@ resource "aws_iam_role_policy" "task" {
 
 The task execution role must have:
 - AWS managed policy: `AmazonECSTaskExecutionRolePolicy`
-- Permission to access the Datadog API key secret (if using `dd_api_key_secret`)
+- Permission to access the Datadog API key secret
 
-The module's `task_execution_role_policy_json` output includes:
-- **DatadogGetSecretValue** (SID): Permission to get the Datadog API key from Secrets Manager (only if `dd_api_key_secret` is provided)
+The module's `task_execution_role_policy_json` output includes permissions from the terraform-aws-service-secrets module for accessing secrets and SSM parameters.
 
 ### Task Role
 
@@ -239,15 +261,20 @@ The module's `task_role_policy_json` output includes:
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 6.26.0 |
+| <a name="provider_null"></a> [null](#provider\_null) | 3.2.4 |
 
 ### Modules
 
-No modules.
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_dd_api_key_secret"></a> [dd\_api\_key\_secret](#module\_dd\_api\_key\_secret) | github.com/Luscii/terraform-aws-service-secrets | n/a |
 
 ### Resources
 
 | Name | Type |
 |------|------|
+| [null_resource.validate_api_key](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
+| [null_resource.validate_ust_variables](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
 | [aws_iam_policy_document.task_execution_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.task_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
@@ -256,8 +283,7 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_container_mount_path_prefix"></a> [container\_mount\_path\_prefix](#input\_container\_mount\_path\_prefix) | Prefix path for container mount points. Datadog sockets will be mounted at this prefix + 'datadog'. | `string` | `"/var/run/"` | no |
-| <a name="input_dd_api_key"></a> [dd\_api\_key](#input\_dd\_api\_key) | Datadog API Key | `string` | `null` | no |
-| <a name="input_dd_api_key_secret"></a> [dd\_api\_key\_secret](#input\_dd\_api\_key\_secret) | Datadog API Key Secret ARN | <pre>object({<br/>    arn = string<br/>  })</pre> | `null` | no |
+| <a name="input_dd_api_key"></a> [dd\_api\_key](#input\_dd\_api\_key) | Datadog API Key configuration. Provide either 'value' for plaintext key or 'value\_from\_arn' for existing secret ARN. When neither is provided, a new secret will be created. | <pre>object({<br/>    value          = optional(string)<br/>    value_from_arn = optional(string)<br/>    description    = optional(string, "Datadog API Key")<br/>  })</pre> | `null` | no |
 | <a name="input_dd_apm"></a> [dd\_apm](#input\_dd\_apm) | Configuration for Datadog APM | <pre>object({<br/>    enabled                       = optional(bool, true)<br/>    socket_enabled                = optional(bool, true)<br/>    profiling                     = optional(bool, false)<br/>    trace_inferred_proxy_services = optional(bool, false)<br/>  })</pre> | <pre>{<br/>  "enabled": true,<br/>  "profiling": false,<br/>  "socket_enabled": true,<br/>  "trace_inferred_proxy_services": false<br/>}</pre> | no |
 | <a name="input_dd_checks_cardinality"></a> [dd\_checks\_cardinality](#input\_dd\_checks\_cardinality) | Datadog Agent checks cardinality | `string` | `null` | no |
 | <a name="input_dd_cluster_name"></a> [dd\_cluster\_name](#input\_dd\_cluster\_name) | Datadog cluster name | `string` | `null` | no |
@@ -280,6 +306,8 @@ No modules.
 | <a name="input_dd_tags"></a> [dd\_tags](#input\_dd\_tags) | Datadog Agent global tags (eg. `key1:value1, key2:value2`) | `string` | `null` | no |
 | <a name="input_dd_version"></a> [dd\_version](#input\_dd\_version) | The task version name. Used for tagging (UST) | `string` | `null` | no |
 | <a name="input_ecs_cluster_arn"></a> [ecs\_cluster\_arn](#input\_ecs\_cluster\_arn) | ARN of the ECS cluster. When provided, IAM policies will be scoped to this cluster. If not provided, policies will use wildcard resources. | `string` | `null` | no |
+| <a name="input_ecs_task_definition_arn"></a> [ecs\_task\_definition\_arn](#input\_ecs\_task\_definition\_arn) | ARN of the ECS task definition. When provided, task-specific IAM permissions will be scoped to this task definition. Use with ecs\_cluster\_arn for granular permissions. | `string` | `null` | no |
+| <a name="input_kms_key_id"></a> [kms\_key\_id](#input\_kms\_key\_id) | KMS Key identifier to encrypt Datadog API key secret if a new secret is created. Can be in any of the formats: Key ID, Key ARN, Alias Name, Alias ARN | `string` | `null` | no |
 | <a name="input_runtime_platform"></a> [runtime\_platform](#input\_runtime\_platform) | Configuration for `runtime_platform` that containers in your task may use | <pre>object({<br/>    cpu_architecture        = optional(string, "X86_64")<br/>    operating_system_family = optional(string, "LINUX")<br/>  })</pre> | <pre>{<br/>  "cpu_architecture": "X86_64",<br/>  "operating_system_family": "LINUX"<br/>}</pre> | no |
 
 ### Outputs
@@ -295,7 +323,7 @@ No modules.
 | <a name="output_datadog_containers_json"></a> [datadog\_containers\_json](#output\_datadog\_containers\_json) | All Datadog-related container definitions as a JSON-encoded string. Use this if you need a pre-encoded JSON string. |
 | <a name="output_datadog_cws_container"></a> [datadog\_cws\_container](#output\_datadog\_cws\_container) | The Datadog Cloud Workload Security instrumentation container definition as a list of objects (empty list if CWS is disabled) |
 | <a name="output_datadog_log_router_container"></a> [datadog\_log\_router\_container](#output\_datadog\_log\_router\_container) | The Datadog Log Router (Fluent Bit) container definition as a list of objects (empty list if log collection is disabled) |
-| <a name="output_task_definition_volumes"></a> [task\_definition\_volumes](#output\_task\_definition\_volumes) | List of volume definitions to add to the ECS task definition. Includes dd-sockets volume and cws-instrumentation-volume (if CWS is enabled). |
+| <a name="output_task_definition_volumes"></a> [task\_definition\_volumes](#output\_task\_definition\_volumes) | List of volume definitions to add to the ECS task definition. Includes dd-sockets volume (if APM/DogStatsD sockets enabled) and cws-instrumentation-volume (if CWS is enabled). |
 | <a name="output_task_execution_role_policy_json"></a> [task\_execution\_role\_policy\_json](#output\_task\_execution\_role\_policy\_json) | IAM policy document JSON for the task execution role. Include this in your task execution role to grant access to Datadog secrets. Returns empty string if no secret is configured. |
 | <a name="output_task_role_policy_json"></a> [task\_role\_policy\_json](#output\_task\_role\_policy\_json) | IAM policy document JSON for the task role. Include this in your task role to grant Datadog agent access to ECS metadata. |
 <!-- END_TF_DOCS -->

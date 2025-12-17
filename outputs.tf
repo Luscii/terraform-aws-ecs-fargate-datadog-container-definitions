@@ -34,7 +34,8 @@ output "datadog_containers_json" {
 
 output "task_execution_role_policy_json" {
   description = "IAM policy document JSON for the task execution role. Include this in your task execution role to grant access to Datadog secrets. Returns empty string if no secret is configured."
-  value       = var.dd_api_key_secret != null ? data.aws_iam_policy_document.task_execution_role.json : ""
+  value       = local.has_dd_api_key ? data.aws_iam_policy_document.task_execution_role.json : ""
+  sensitive   = true
 }
 
 output "task_role_policy_json" {
