@@ -324,3 +324,14 @@ variable "ecs_cluster_arn" {
   type        = string
   default     = null
 }
+
+################################################################################
+# Container Integration Configuration
+################################################################################
+
+variable "container_mount_path_prefix" {
+  description = "Prefix path for container mount points. Datadog sockets will be mounted at this prefix + 'datadog'."
+  type        = string
+  default     = "/var/run/"
+  nullable    = false
+}

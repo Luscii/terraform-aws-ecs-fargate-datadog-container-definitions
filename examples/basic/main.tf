@@ -39,49 +39,12 @@ locals {
           protocol      = "tcp"
         }
       ]
-      environment = [
-        # Add Datadog environment variables for APM
-        {
-          name  = "DD_TRACE_AGENT_URL"
-          value = "unix:///var/run/datadog/apm.socket"
-        },
-        {
-          name  = "DD_DOGSTATSD_URL"
-          value = "unix:///var/run/datadog/dsd.socket"
-        },
-        {
-          name  = "DD_ENV"
-          value = var.environment
-        },
-        {
-          name  = "DD_SERVICE"
-          value = var.service_name
-        },
-        {
-          name  = "DD_VERSION"
-          value = var.app_version
-        }
-      ]
-      mountPoints = [
-        # Mount Datadog socket volume
-        {
-          containerPath = "/var/run/datadog"
-          sourceVolume  = "dd-sockets"
-          readOnly      = false
-        }
-      ]
-      dependsOn = [
-        # Wait for Datadog agent to be healthy
-        {
-          containerName = "datadog-agent"
-          condition     = "HEALTHY"
-        }
-      ]
-      dockerLabels = {
-        "com.datadoghq.tags.env"     = var.environment
-        "com.datadoghq.tags.service" = var.service_name
-        "com.datadoghq.tags.version" = var.app_version
-      }
+
+      # Use module outputs for Datadog integration
+      environment  = module.datadog_container_definitions.container_environment_variables
+      mountPoints  = module.datadog_container_definitions.container_mount_points
+      dependsOn    = module.datadog_container_definitions.container_depends_on
+      dockerLabels = module.datadog_container_definitions.container_docker_labels
     }
   ]
 }
@@ -107,8 +70,11 @@ resource "aws_ecs_task_definition" "this" {
     )
   )
 
-  # Add required volumes for Datadog
-  volume {
-    name = "dd-sockets"
+  # Add required volumes for Datadog using module output
+  dynamic "volume" {
+    for_each = module.datadog_container_definitions.task_definition_volumes
+    content {
+      name = volume.value.name
+    }
   }
 }

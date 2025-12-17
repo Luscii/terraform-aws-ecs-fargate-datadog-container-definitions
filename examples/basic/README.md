@@ -6,7 +6,7 @@ This example demonstrates the basic usage of the terraform-aws-ecs-fargate-datad
 
 This example shows how to:
 - Use the module to get Datadog container definitions
-- Combine Datadog containers with your application containers
+- Use module outputs to automatically integrate Datadog into application containers
 - Create an ECS task definition with the combined container definitions
 
 ## Prerequisites
@@ -15,27 +15,9 @@ Before using this example, you must have:
 
 1. **ECS Task Execution Role** with the following permissions:
    - AWS managed policy: `AmazonECSTaskExecutionRolePolicy`
-   - Permission to access the Datadog API key secret:
-     ```json
-     {
-       "Effect": "Allow",
-       "Action": ["secretsmanager:GetSecretValue"],
-       "Resource": ["arn:aws:secretsmanager:REGION:ACCOUNT:secret:datadog-api-key-*"]
-     }
-     ```
+   - Permission to access the Datadog API key secret (use module's `task_execution_role_policy_json` output)
 
-2. **ECS Task Role** with permissions for Datadog agent:
-   ```json
-   {
-     "Effect": "Allow",
-     "Action": [
-       "ecs:ListClusters",
-       "ecs:ListContainerInstances",
-       "ecs:DescribeContainerInstances"
-     ],
-     "Resource": ["*"]
-   }
-   ```
+2. **ECS Task Role** with permissions for Datadog agent (use module's `task_role_policy_json` output)
 
 3. **Datadog API Key Secret** in AWS Secrets Manager:
    ```bash
@@ -66,10 +48,14 @@ Before using this example, you must have:
 ## What This Example Demonstrates
 
 - Using the module to generate Datadog container definitions
-- Combining Datadog containers with application containers using `concat()`
+- **Automatic Datadog integration using module outputs:**
+  - `container_environment_variables` - APM and DogStatsD configuration
+  - `container_mount_points` - Required volume mounts
+  - `container_depends_on` - Container dependencies
+  - `container_docker_labels` - Unified Service Tagging labels
+  - `task_definition_volumes` - Required ECS task volumes
 - Creating an ECS task definition with the combined container definitions
-- Configuring Unified Service Tagging (UST) for Datadog
-- Proper volume mounts and container dependencies for Datadog integration
+- No manual configuration needed - module outputs handle all Datadog integration
 
 ## Outputs
 

@@ -16,9 +16,10 @@ module "datadog_containers" {
   
   dd_service = "my-service"
   dd_env     = "production"
+  dd_version = "1.0.0"
 }
 
-# Define your application containers with Datadog integration
+# Define your application containers using module outputs for automatic Datadog integration
 locals {
   app_containers = [
     {
@@ -28,34 +29,11 @@ locals {
       memory    = 512
       essential = true
       
-      environment = [
-        { name = "DD_TRACE_AGENT_URL", value = "unix:///var/run/datadog/apm.socket" },
-        { name = "DD_DOGSTATSD_URL", value = "unix:///var/run/datadog/dsd.socket" },
-        { name = "DD_ENV", value = "production" },
-        { name = "DD_SERVICE", value = "my-service" },
-        { name = "DD_VERSION", value = "1.0.0" }
-      ]
-      
-      mountPoints = [
-        {
-          containerPath = "/var/run/datadog"
-          sourceVolume  = "dd-sockets"
-          readOnly      = false
-        }
-      ]
-      
-      dependsOn = [
-        {
-          containerName = "datadog-agent"
-          condition     = "HEALTHY"
-        }
-      ]
-      
-      dockerLabels = {
-        "com.datadoghq.tags.env"     = "production"
-        "com.datadoghq.tags.service" = "my-service"
-        "com.datadoghq.tags.version" = "1.0.0"
-      }
+      # Automatic Datadog integration using module outputs
+      environment  = module.datadog_containers.container_environment_variables
+      mountPoints  = module.datadog_containers.container_mount_points
+      dependsOn    = module.datadog_containers.container_depends_on
+      dockerLabels = module.datadog_containers.container_docker_labels
     }
   ]
 }
@@ -77,8 +55,12 @@ resource "aws_ecs_task_definition" "this" {
     )
   )
   
-  volume {
-    name = "dd-sockets"
+  # Use module output for required volumes
+  dynamic "volume" {
+    for_each = module.datadog_containers.task_definition_volumes
+    content {
+      name = volume.value.name
+    }
   }
 }
 ```
@@ -130,49 +112,19 @@ locals {
       essential  = true
       entryPoint = ["/usr/local/bin/docker-entrypoint.sh"]
       
-      environment = [
-        { name = "DD_TRACE_AGENT_URL", value = "unix:///var/run/datadog/apm.socket" },
-        { name = "DD_DOGSTATSD_URL", value = "unix:///var/run/datadog/dsd.socket" },
-        { name = "DD_ENV", value = "production" },
-        { name = "DD_SERVICE", value = "my-service" },
-        { name = "DD_VERSION", value = "1.0.0" }
-      ]
+      # Module outputs automatically include all required Datadog configuration
+      # including CWS-specific mount points and dependencies
+      environment  = module.datadog_containers.container_environment_variables
+      mountPoints  = module.datadog_containers.container_mount_points
+      dependsOn    = module.datadog_containers.container_depends_on
+      dockerLabels = module.datadog_containers.container_docker_labels
       
-      mountPoints = [
-        {
-          containerPath = "/var/run/datadog"
-          sourceVolume  = "dd-sockets"
-          readOnly      = false
-        },
-        {
-          containerPath = "/cws-instrumentation-volume"
-          sourceVolume  = "cws-instrumentation-volume"
-          readOnly      = false
-        }
-      ]
-      
-      dependsOn = [
-        {
-          containerName = "datadog-agent"
-          condition     = "HEALTHY"
-        },
-        {
-          containerName = "cws-instrumentation-init"
-          condition     = "SUCCESS"
-        }
-      ]
-      
+      # CWS requires additional Linux parameters
       linuxParameters = {
         capabilities = {
           add  = ["SYS_PTRACE"]
           drop = []
         }
-      }
-      
-      dockerLabels = {
-        "com.datadoghq.tags.env"     = "production"
-        "com.datadoghq.tags.service" = "my-service"
-        "com.datadoghq.tags.version" = "1.0.0"
       }
     }
   ]
@@ -194,12 +146,12 @@ resource "aws_ecs_task_definition" "this" {
     )
   )
   
-  volume {
-    name = "dd-sockets"
-  }
-  
-  volume {
-    name = "cws-instrumentation-volume"
+  # Module output automatically includes CWS volume when enabled
+  dynamic "volume" {
+    for_each = module.datadog_containers.task_definition_volumes
+    content {
+      name = volume.value.name
+    }
   }
 }
 ```
@@ -303,6 +255,7 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_container_mount_path_prefix"></a> [container\_mount\_path\_prefix](#input\_container\_mount\_path\_prefix) | Prefix path for container mount points. Datadog sockets will be mounted at this prefix + 'datadog'. | `string` | `"/var/run/"` | no |
 | <a name="input_dd_api_key"></a> [dd\_api\_key](#input\_dd\_api\_key) | Datadog API Key | `string` | `null` | no |
 | <a name="input_dd_api_key_secret"></a> [dd\_api\_key\_secret](#input\_dd\_api\_key\_secret) | Datadog API Key Secret ARN | <pre>object({<br/>    arn = string<br/>  })</pre> | `null` | no |
 | <a name="input_dd_apm"></a> [dd\_apm](#input\_dd\_apm) | Configuration for Datadog APM | <pre>object({<br/>    enabled                       = optional(bool, true)<br/>    socket_enabled                = optional(bool, true)<br/>    profiling                     = optional(bool, false)<br/>    trace_inferred_proxy_services = optional(bool, false)<br/>  })</pre> | <pre>{<br/>  "enabled": true,<br/>  "profiling": false,<br/>  "socket_enabled": true,<br/>  "trace_inferred_proxy_services": false<br/>}</pre> | no |
@@ -333,11 +286,16 @@ No modules.
 
 | Name | Description |
 |------|-------------|
+| <a name="output_container_depends_on"></a> [container\_depends\_on](#output\_container\_depends\_on) | List of container dependencies to add to application containers. Ensures Datadog agent (and log router/CWS if enabled) are ready before application starts. |
+| <a name="output_container_docker_labels"></a> [container\_docker\_labels](#output\_container\_docker\_labels) | Map of Docker labels to add to application containers for Unified Service Tagging. Includes env, service, and version labels. |
+| <a name="output_container_environment_variables"></a> [container\_environment\_variables](#output\_container\_environment\_variables) | List of environment variables to add to application containers for Datadog integration. Includes DD\_TRACE\_AGENT\_URL, DD\_DOGSTATSD\_URL (if socket-based), and Unified Service Tagging variables. |
+| <a name="output_container_mount_points"></a> [container\_mount\_points](#output\_container\_mount\_points) | List of mount points to add to application containers for Datadog integration. Includes Datadog socket volume and CWS instrumentation volume (if enabled). |
 | <a name="output_datadog_agent_container"></a> [datadog\_agent\_container](#output\_datadog\_agent\_container) | The Datadog Agent container definition as a list of objects (includes init-volume container if read-only root filesystem is enabled) |
 | <a name="output_datadog_containers"></a> [datadog\_containers](#output\_datadog\_containers) | All Datadog-related container definitions as a list of objects. Combine this with your application containers in your task definition. |
 | <a name="output_datadog_containers_json"></a> [datadog\_containers\_json](#output\_datadog\_containers\_json) | All Datadog-related container definitions as a JSON-encoded string. Use this if you need a pre-encoded JSON string. |
 | <a name="output_datadog_cws_container"></a> [datadog\_cws\_container](#output\_datadog\_cws\_container) | The Datadog Cloud Workload Security instrumentation container definition as a list of objects (empty list if CWS is disabled) |
 | <a name="output_datadog_log_router_container"></a> [datadog\_log\_router\_container](#output\_datadog\_log\_router\_container) | The Datadog Log Router (Fluent Bit) container definition as a list of objects (empty list if log collection is disabled) |
+| <a name="output_task_definition_volumes"></a> [task\_definition\_volumes](#output\_task\_definition\_volumes) | List of volume definitions to add to the ECS task definition. Includes dd-sockets volume and cws-instrumentation-volume (if CWS is enabled). |
 | <a name="output_task_execution_role_policy_json"></a> [task\_execution\_role\_policy\_json](#output\_task\_execution\_role\_policy\_json) | IAM policy document JSON for the task execution role. Include this in your task execution role to grant access to Datadog secrets. Returns empty string if no secret is configured. |
 | <a name="output_task_role_policy_json"></a> [task\_role\_policy\_json](#output\_task\_role\_policy\_json) | IAM policy document JSON for the task role. Include this in your task role to grant Datadog agent access to ECS metadata. |
 <!-- END_TF_DOCS -->
