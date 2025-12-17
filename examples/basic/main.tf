@@ -96,8 +96,8 @@ resource "aws_ecs_task_definition" "this" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 512
   memory                   = 1024
-  execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.task_role_arn
 
   # Combine Datadog containers with application containers
   container_definitions = jsonencode(
@@ -111,89 +111,4 @@ resource "aws_ecs_task_definition" "this" {
   volume {
     name = "dd-sockets"
   }
-}
-
-################################################################################
-# IAM Roles
-################################################################################
-
-resource "aws_iam_role" "execution" {
-  name = "${var.service_name}-${var.environment}-execution"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "execution_policy" {
-  role       = aws_iam_role.execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-# Allow access to Datadog API key secret
-resource "aws_iam_role_policy" "execution_secrets" {
-  name = "datadog-secrets-access"
-  role = aws_iam_role.execution.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = [
-          var.datadog_api_key_secret_arn
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role" "task" {
-  name = "${var.service_name}-${var.environment}-task"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-# Datadog agent needs ECS permissions
-resource "aws_iam_role_policy" "task_datadog" {
-  name = "datadog-ecs-permissions"
-  role = aws_iam_role.task.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecs:ListClusters",
-          "ecs:ListContainerInstances",
-          "ecs:DescribeContainerInstances"
-        ]
-        Resource = ["*"]
-      }
-    ]
-  })
 }

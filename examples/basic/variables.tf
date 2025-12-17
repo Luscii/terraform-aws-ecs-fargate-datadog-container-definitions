@@ -44,3 +44,13 @@ variable "datadog_site" {
   type        = string
   default     = "datadoghq.com"
 }
+
+variable "execution_role_arn" {
+  description = "ARN of the ECS task execution role. Must have permissions to pull images and access secrets."
+  type        = string
+}
+
+variable "task_role_arn" {
+  description = "ARN of the ECS task role. Must have permissions for Datadog agent to access ECS metadata."
+  type        = string
+}

@@ -67,8 +67,8 @@ resource "aws_ecs_task_definition" "this" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 512
   memory                   = 1024
-  execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.task_role_arn
   
   container_definitions = jsonencode(
     concat(
@@ -184,8 +184,8 @@ resource "aws_ecs_task_definition" "this" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 512
   memory                   = 1024
-  execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.task_role_arn
   
   container_definitions = jsonencode(
     concat(
@@ -201,6 +201,50 @@ resource "aws_ecs_task_definition" "this" {
   volume {
     name = "cws-instrumentation-volume"
   }
+}
+```
+
+## Required IAM Permissions
+
+This module does not create IAM roles. You must provide IAM roles with the following permissions:
+
+### Task Execution Role
+
+The task execution role must have:
+- AWS managed policy: `AmazonECSTaskExecutionRolePolicy`
+- Permission to access the Datadog API key secret (if using `dd_api_key_secret`):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue"],
+      "Resource": ["arn:aws:secretsmanager:REGION:ACCOUNT:secret:datadog-api-key-*"]
+    }
+  ]
+}
+```
+
+### Task Role
+
+The task role must have permissions for the Datadog agent to access ECS metadata:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:ListClusters",
+        "ecs:ListContainerInstances",
+        "ecs:DescribeContainerInstances"
+      ],
+      "Resource": ["*"]
+    }
+  ]
 }
 ```
 
