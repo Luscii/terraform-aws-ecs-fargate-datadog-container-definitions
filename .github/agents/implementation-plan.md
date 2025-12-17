@@ -141,15 +141,15 @@ You coordinate work across these specialist agents in sequence:
 
 **Activities:**
 
-1. **.tf Files** - .tf files needed for terraform-module-specialist
-2. **Module Sources** - Which Luscii modules to use, provider versions
-3. **Naming/Tagging** - CloudPosse label module integration (v0.25.0)
-4. **Variables** - Required and optional inputs with validation
-5. **Outputs** - What values to export
-6. **Documentation Needs** - What documentation-specialist should create
-7. **Example Scenarios** - What examples examples-specialist should create
-8. **Testing** - Validation commands and security scanning
-9. **Security** - Sensitive variable handling, IAM permissions
+- **.tf Files** - .tf files needed for terraform-module-specialist
+- **Module Sources** - Which Luscii modules to use, provider versions
+- **Naming/Tagging** - CloudPosse label module integration (v0.25.0)
+- **Variables** - Required and optional inputs with validation
+- **Outputs** - What values to export
+- **Documentation Needs** - What documentation-specialist should create
+- **Example Scenarios** - What examples examples-specialist should create
+- **Testing** - Validation commands and security scanning
+- **Security** - Sensitive variable handling, IAM permissions
 
 **Agent Coordination:**
 - Clearly identify which tasks belong to which agent
