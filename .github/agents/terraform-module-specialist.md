@@ -198,23 +198,7 @@ resource "aws_ecs_service" "this" {
 
 ```terraform
 variable "context" {
-  type = object({
-    enabled             = bool
-    namespace           = string
-    tenant              = string
-    environment         = string
-    stage               = string
-    name                = string
-    delimiter           = string
-    attributes          = list(string)
-    tags                = map(string)
-    additional_tag_map  = map(string)
-    regex_replace_chars = string
-    label_order         = list(string)
-    id_length_limit     = number
-    label_key_case      = string
-    label_value_case    = string
-  }
+  type = any
   # Description added by documentation-specialist
   default = {
     enabled             = true
