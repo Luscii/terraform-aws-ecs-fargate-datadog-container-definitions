@@ -77,14 +77,14 @@ locals {
 
   # Build mount points list
   datadog_mount_points = concat(
-    # Datadog socket volume (always needed for APM/DogStatsD)
-    [
+    # Datadog socket volume (only if APM or DogStatsD sockets are enabled)
+    (var.dd_apm.enabled && var.dd_apm.socket_enabled) || (var.dd_dogstatsd.enabled && var.dd_dogstatsd.socket_enabled) ? [
       {
         containerPath = local.datadog_socket_path
         sourceVolume  = "dd-sockets"
         readOnly      = false
       }
-    ],
+    ] : [],
     # CWS instrumentation volume (only if CWS is enabled)
     local.cws_enabled ? [
       {
@@ -130,13 +130,15 @@ output "container_docker_labels" {
 }
 
 output "task_definition_volumes" {
-  description = "List of volume definitions to add to the ECS task definition. Includes dd-sockets volume and cws-instrumentation-volume (if CWS is enabled)."
+  description = "List of volume definitions to add to the ECS task definition. Includes dd-sockets volume (if APM/DogStatsD sockets enabled) and cws-instrumentation-volume (if CWS is enabled)."
   value = concat(
-    [
+    # Socket volume (only if APM or DogStatsD sockets are enabled)
+    (var.dd_apm.enabled && var.dd_apm.socket_enabled) || (var.dd_dogstatsd.enabled && var.dd_dogstatsd.socket_enabled) ? [
       {
         name = "dd-sockets"
       }
-    ],
+    ] : [],
+    # CWS volume (only if CWS is enabled)
     local.cws_enabled ? [
       {
         name = "cws-instrumentation-volume"
