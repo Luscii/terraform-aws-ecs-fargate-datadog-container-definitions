@@ -18,13 +18,18 @@ variable "dd_api_key" {
   default   = null
 
   validation {
-    condition     = var.dd_api_key == null || (var.dd_api_key.value == null || var.dd_api_key.value_from_arn == null)
+    condition = (
+      var.dd_api_key == null ||
+      (var.dd_api_key.value != null && var.dd_api_key.value_from_arn == null) ||
+      (var.dd_api_key.value == null && var.dd_api_key.value_from_arn != null)
+    )
     error_message = "Only one of 'value' or 'value_from_arn' can be set, not both."
   }
 
   validation {
-    condition = var.dd_api_key == null ? true : (
-      var.dd_api_key.value_from_arn == null ? true :
+    condition = (
+      var.dd_api_key == null ||
+      var.dd_api_key.value_from_arn == null ||
       can(regex("^arn:aws:secretsmanager:[a-zA-Z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9-_/]+-[a-zA-Z0-9]{6}$", var.dd_api_key.value_from_arn))
     )
     error_message = "The value_from_arn must be a valid Secrets Manager ARN with format: arn:aws:secretsmanager:region:account-id:secret:secret-name-suffix"

@@ -54,7 +54,7 @@ resource "null_resource" "validate_ust_variables" {
 
 # Use terraform-aws-service-secrets module to manage the Datadog API key secret
 module "dd_api_key_secret" {
-  source = "github.com/Luscii/terraform-aws-service-secrets"
+  source = "github.com/Luscii/terraform-aws-service-secrets?ref=1.2.1"
 
   context = {
     enabled             = local.has_dd_api_key
