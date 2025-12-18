@@ -18,8 +18,6 @@ locals {
   }
 }
 
-
-
 locals {
 
   is_linux               = var.runtime_platform == null || try(var.runtime_platform.operating_system_family == null, true) || try(var.runtime_platform.operating_system_family == "LINUX", true)
