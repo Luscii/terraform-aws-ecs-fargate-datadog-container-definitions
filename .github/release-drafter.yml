@@ -24,8 +24,6 @@ version-resolver:
   patch:
     labels:
       - "version: patch"
-      - "bug"
-      - "dependencies"
   default: patch
 
 categories:
@@ -64,7 +62,7 @@ exclude-labels:
   - skip-changelog
 
 replacers:
-  - search: '/^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(!)?:\s*/i'
+  - search: '/\b(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(!)?:\s*/i'
     replace: ''
   - search: '/\b(fix|close|resolve)(s|d)?\s+(#\d+)/gi'
     replace: 'fixes #$3'
