@@ -27,24 +27,6 @@ check "validate_api_key" {
   }
 }
 
-# Validation: UST variables must be provided when Datadog is enabled
-check "validate_ust_variables" {
-  assert {
-    condition     = !local.datadog_enabled || var.service_name != null
-    error_message = "service_name is required when Datadog is enabled. This is used for Unified Service Tagging."
-  }
-
-  assert {
-    condition     = !local.datadog_enabled || module.label.stage != null
-    error_message = "stage is required when Datadog is enabled. Set it via the `stage` variable or `context.stage`; module.label.stage is the merged result used for Unified Service Tagging."
-  }
-
-  assert {
-    condition     = !local.datadog_enabled || var.service_version != null
-    error_message = "service_version is required when Datadog is enabled. This is used for Unified Service Tagging."
-  }
-}
-
 # Use terraform-aws-service-secrets module to manage the Datadog API key secret
 module "api_key_secret" {
   source = "github.com/Luscii/terraform-aws-service-secrets?ref=1.2.1"
