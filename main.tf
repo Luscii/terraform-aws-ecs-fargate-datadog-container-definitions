@@ -212,7 +212,7 @@ locals {
         cpu                    = 0
         memory                 = 128
         name                   = "init-volume"
-        image                  = "${var.registry}:${var.image_version}"
+        image                  = "${var.agent_image}:${var.agent_image_version}"
         essential              = false
         readOnlyRootFilesystem = true
         command                = ["/bin/sh", "-c", "cp -vnR /etc/datadog-agent/* /agent-config/ && exit 0"]
@@ -229,7 +229,7 @@ locals {
       merge(
         {
           name         = "datadog-agent"
-          image        = "${var.registry}:${var.image_version}"
+          image        = "${var.agent_image}:${var.agent_image_version}"
           essential    = var.agent_essential
           environment  = local.dd_agent_env
           dockerLabels = var.agent_docker_labels
@@ -316,7 +316,7 @@ locals {
   dd_cws_container = local.is_cws_supported ? [
     {
       name             = "cws-instrumentation-init"
-      image            = "datadog/cws-instrumentation:latest"
+      image            = "${var.cws.image}:${var.cws.image_version}"
       cpu              = var.cws.cpu
       memory_limit_mib = var.cws.memory_limit_mib
       user             = "0"

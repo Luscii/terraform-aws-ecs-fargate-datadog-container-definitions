@@ -86,14 +86,14 @@ variable "kms_key_id" {
   default     = null
 }
 
-variable "registry" {
+variable "agent_image" {
   description = "Datadog Agent image registry"
   type        = string
   default     = "public.ecr.aws/datadog/agent"
   nullable    = false
 }
 
-variable "image_version" {
+variable "agent_image_version" {
   description = "Datadog Agent image version"
   type        = string
   default     = "7"
@@ -333,6 +333,8 @@ variable "cws" {
   description = "Configuration for Datadog Cloud Workload Security (CWS)"
   type = object({
     enabled          = optional(bool, false)
+    image            = optional(string, "datadog/cws-instrumentation")
+    image_version    = optional(string, "7.73.0")
     cpu              = optional(number)
     memory_limit_mib = optional(number)
   })
