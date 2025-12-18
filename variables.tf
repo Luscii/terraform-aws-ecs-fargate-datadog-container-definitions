@@ -151,7 +151,7 @@ variable "site" {
 }
 
 variable "agent_environment" {
-  description = "Datadog Agent container environment variables. Highest precedence and overwrites other environment variables defined by the module. For example, `dd_environment = [ { name = 'DD_VAR', value = 'DD_VAL' } ]`"
+  description = "Datadog Agent container environment variables. Highest precedence and overwrites other environment variables defined by the module. For example, `agent_environment = [ { name = 'DD_VAR', value = 'DD_VAL' } ]`"
   type        = list(map(string))
   default     = [{}]
   nullable    = false
