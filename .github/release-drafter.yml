@@ -1,5 +1,6 @@
 name-template: "v$RESOLVED_VERSION"
 tag-template: "$RESOLVED_VERSION"
+category-template: "### $TITLE"
 change-template: "- $TITLE (#$NUMBER)"
 no-changes-template: "- No changes"
 
@@ -38,7 +39,7 @@ categories:
     labels:
       - bug
       - fix
-  - title: "🛠️ Chores & Enhancements"
+  - title: "🛠️ Module changes"
     labels:
       - infrastructure
   - title: "📚 Documentation"
