@@ -10,10 +10,10 @@ module "datadog_container_definitions" {
   source = "../.."
 
   # Datadog API Key (using existing secret)
-  dd_api_key = {
+  api_key = {
     value_from_arn = var.datadog_api_key_secret_arn
   }
-  dd_site = var.datadog_site
+  site = var.datadog_site
 
   # Unified Service Tagging (required)
   service_name    = var.service_name

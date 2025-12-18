@@ -119,13 +119,6 @@ variable "agent_essential" {
   nullable    = false
 }
 
-variable "is_agent_dependency_enabled" {
-  description = "Whether the Datadog Agent container is a dependency for other containers"
-  type        = bool
-  default     = false
-  nullable    = false
-}
-
 variable "agent_readonly_root_filesystem" {
   description = "Datadog Agent container runs with read-only root filesystem enabled"
   type        = bool
@@ -198,16 +191,6 @@ variable "service_version" {
   description = "The version identifier for Datadog Unified Service Tagging (UST). Sets the `DD_VERSION` environment variable and `com.datadoghq.tags.version` Docker label. Should identify the application version (e.g., 'v1.2.3', git commit SHA)."
   type        = string
   default     = null
-}
-
-variable "checks_cardinality" {
-  description = "Datadog Agent checks cardinality"
-  type        = string
-  default     = null
-  validation {
-    condition     = var.checks_cardinality == null || can(contains(["low", "orchestrator", "high"], var.checks_cardinality))
-    error_message = "The Datadog Agent checks cardinality must be one of 'low', 'orchestrator', 'high', or null."
-  }
 }
 
 variable "dogstatsd" {

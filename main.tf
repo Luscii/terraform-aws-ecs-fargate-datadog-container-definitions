@@ -11,11 +11,6 @@ locals {
   install_info_tool              = "terraform"
   install_info_tool_version      = "terraform-aws-ecs-datadog"
   install_info_installer_version = local.version
-
-  # AWS Resource Tags
-  tags = {
-    dd_ecs_terraform_module = local.version
-  }
 }
 
 locals {
@@ -57,8 +52,7 @@ locals {
   is_dsd_socket_mount = var.dogstatsd.enabled && var.dogstatsd.socket_enabled && local.is_linux
   is_apm_dsd_volume   = local.is_apm_socket_mount || local.is_dsd_socket_mount
 
-  cws_entry_point_prefix = ["/cws-instrumentation-volume/cws-instrumentation", "trace", "--"]
-  is_cws_supported       = local.is_linux && var.cws.enabled
+  is_cws_supported = local.is_linux && var.cws.enabled
 
   cws_mount = local.is_cws_supported ? [
     {
@@ -97,93 +91,14 @@ locals {
     ] : []
   )
 
-  apm_socket_var = local.is_apm_socket_mount ? [
-    {
-      name  = "DD_TRACE_AGENT_URL"
-      value = "unix:///var/run/datadog/apm.socket"
-    }
-  ] : []
-
-  dsd_socket_var = local.is_dsd_socket_mount ? [
-    {
-      name  = "DD_DOGSTATSD_URL"
-      value = "unix:///var/run/datadog/dsd.socket"
-    }
-  ] : []
-
-  dsd_port_var = !local.is_dsd_socket_mount && var.dogstatsd.enabled ? [
-    {
-      name  = "DD_AGENT_HOST"
-      value = "127.0.0.1"
-    }
-  ] : []
-
-  ust_env_vars = concat(
-    module.label.stage != null ? [
-      {
-        name  = "DD_ENV"
-        value = module.label.stage
-      }
-    ] : [],
-    var.service_name != null ? [
-      {
-        name  = "DD_SERVICE"
-        value = var.service_name
-      }
-    ] : [],
-    var.service_version != null ? [
-      {
-        name  = "DD_VERSION"
-        value = var.service_version
-      }
-    ] : [],
-  )
-
-  ust_docker_labels = merge(
-    module.label.stage != null ? {
-      "com.datadoghq.tags.env" = module.label.stage
-    } : {},
-    var.service_name != null ? {
-      "com.datadoghq.tags.service" = var.service_name
-    } : {},
-    var.service_version != null ? {
-      "com.datadoghq.tags.version" = var.service_version
-    } : {},
-  )
-
-  application_env_vars = concat(
-    var.apm.profiling != null ? [
-      {
-        name  = "DD_PROFILING_ENABLED"
-        value = tostring(var.apm.profiling)
-      }
-    ] : [],
-    var.apm.trace_inferred_proxy_services != null ? [
-      {
-        name  = "DD_TRACE_INFERRED_PROXY_SERVICES_ENABLED"
-        value = tostring(var.apm.trace_inferred_proxy_services)
-      }
-    ] : [],
-  )
-
-  agent_dependency = var.is_agent_dependency_enabled && try(var.agent_health_check.command != null, false) ? [
-    {
-      containerName = "datadog-agent"
-      condition     = "HEALTHY"
-    }
-  ] : []
+  # Note: Dependency variables for application containers are provided via
+  # integration-outputs.tf (container_depends_on output) for users to add to their
+  # own containers. This module does not modify application containers directly.
 
   log_router_dependency = try(var.log_collection.fluentbit_config.is_log_router_dependency_enabled, false) && try(var.log_collection.fluentbit_config.log_router_health_check.command != null, false) && local.dd_firelens_log_configuration != null ? [
     {
       containerName = "datadog-log-router"
       condition     = "HEALTHY"
-    }
-  ] : []
-
-  cws_dependency = local.is_cws_supported ? [
-    {
-      containerName = "cws-instrumentation-init"
-      condition     = "SUCCESS"
     }
   ] : []
 

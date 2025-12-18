@@ -38,7 +38,7 @@ Users combine the Datadog containers with their application containers:
 ```hcl
 module "datadog_containers" {
   source = "..."
-  
+
   api_key_secret   = { arn = "..." }
   service_name        = "my-service"
   stage               = "production"

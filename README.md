@@ -13,7 +13,7 @@ module "datadog_containers" {
   dd_api_key = {
     value = "your-datadog-api-key"  # Or use value_from_arn for existing secret
   }
-  
+
   service_name    = "my-service"
   stage           = "production"
   service_version = "1.0.0"
@@ -28,7 +28,7 @@ locals {
       cpu       = 256
       memory    = 512
       essential = true
-      
+
       # Automatic Datadog integration using module outputs
       environment  = module.datadog_containers.container_environment_variables
       mountPoints  = module.datadog_containers.container_mount_points
@@ -47,14 +47,14 @@ resource "aws_ecs_task_definition" "this" {
   memory                   = 1024
   execution_role_arn       = var.execution_role_arn
   task_role_arn            = var.task_role_arn
-  
+
   container_definitions = jsonencode(
     concat(
       module.datadog_containers.datadog_containers,
       local.app_containers
     )
   )
-  
+
   # Use module output for required volumes
   dynamic "volume" {
     for_each = module.datadog_containers.task_definition_volumes
@@ -74,7 +74,7 @@ module "datadog_containers" {
   dd_api_key = {
     value_from_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key-abc123"
   }
-  
+
   service_name    = "my-service"
   stage           = "production"
   service_version = "1.0.0"
@@ -90,14 +90,14 @@ module "datadog_containers" {
   dd_api_key = {
     value = var.datadog_api_key
   }
-  
+
   service_name    = "my-service"
   stage           = "production"
   service_version = "1.0.0"
-  
+
   # Optional: Use custom KMS key for secret encryption
   kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
-  
+
   # Enable log collection
   log_collection = {
     enabled = true
@@ -110,14 +110,14 @@ module "datadog_containers" {
       }
     }
   }
-  
+
   # Enable CWS
   cws = {
     enabled          = true
     cpu              = 128
     memory_limit_mib = 256
   }
-  
+
   dd_is_datadog_dependency_enabled = true
 }
 
@@ -130,14 +130,14 @@ locals {
       memory     = 512
       essential  = true
       entryPoint = ["/usr/local/bin/docker-entrypoint.sh"]
-      
+
       # Module outputs automatically include all required Datadog configuration
       # including CWS-specific mount points and dependencies
       environment  = module.datadog_containers.container_environment_variables
       mountPoints  = module.datadog_containers.container_mount_points
       dependsOn    = module.datadog_containers.container_depends_on
       dockerLabels = module.datadog_containers.container_docker_labels
-      
+
       # CWS requires additional Linux parameters
       linuxParameters = {
         capabilities = {
@@ -157,14 +157,14 @@ resource "aws_ecs_task_definition" "this" {
   memory                   = 1024
   execution_role_arn       = var.execution_role_arn
   task_role_arn            = var.task_role_arn
-  
+
   container_definitions = jsonencode(
     concat(
       module.datadog_containers.datadog_containers,
       local.app_containers
     )
   )
-  
+
   # Module output automatically includes CWS volume when enabled
   dynamic "volume" {
     for_each = module.datadog_containers.task_definition_volumes
@@ -193,10 +193,10 @@ module "datadog_containers" {
   service_name    = "my-service"
   stage           = "production"
   service_version = "1.0.0"
-  
+
   # Optional: Scope ECS permissions to specific cluster
   ecs_cluster_arn = "arn:aws:ecs:us-east-1:123456789012:cluster/my-cluster"
-  
+
   # Optional: Scope task permissions to specific task definition
   ecs_task_definition_arn = "arn:aws:ecs:us-east-1:123456789012:task-definition/my-task"
 }
@@ -266,7 +266,7 @@ The module's `task_role_policy_json` output includes:
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_dd_api_key_secret"></a> [dd\_api\_key\_secret](#module\_dd\_api\_key\_secret) | github.com/Luscii/terraform-aws-service-secrets | 1.2.1 |
+| <a name="module_api_key_secret"></a> [api\_key\_secret](#module\_api\_key\_secret) | github.com/Luscii/terraform-aws-service-secrets | 1.2.1 |
 | <a name="module_label"></a> [label](#module\_label) | cloudposse/label/null | 0.25.0 |
 
 ### Resources
@@ -291,17 +291,15 @@ The module's `task_role_policy_json` output includes:
 | <a name="input_agent_tags"></a> [agent\_tags](#input\_agent\_tags) | Datadog Agent global tags (eg. `key1:value1, key2:value2`) | `string` | `null` | no |
 | <a name="input_api_key"></a> [api\_key](#input\_api\_key) | Datadog API Key configuration. Provide either 'value' for plaintext key or 'value\_from\_arn' for existing secret ARN. When neither is provided, a new secret will be created. | <pre>object({<br/>    value          = optional(string)<br/>    value_from_arn = optional(string)<br/>    description    = optional(string, "Datadog API Key")<br/>  })</pre> | `null` | no |
 | <a name="input_apm"></a> [apm](#input\_apm) | Configuration for Datadog APM | <pre>object({<br/>    enabled                       = optional(bool, true)<br/>    socket_enabled                = optional(bool, true)<br/>    profiling                     = optional(bool, false)<br/>    trace_inferred_proxy_services = optional(bool, false)<br/>  })</pre> | <pre>{<br/>  "enabled": true,<br/>  "profiling": false,<br/>  "socket_enabled": true,<br/>  "trace_inferred_proxy_services": false<br/>}</pre> | no |
-| <a name="input_checks_cardinality"></a> [checks\_cardinality](#input\_checks\_cardinality) | Datadog Agent checks cardinality | `string` | `null` | no |
 | <a name="input_container_mount_path_prefix"></a> [container\_mount\_path\_prefix](#input\_container\_mount\_path\_prefix) | Prefix path for container mount points. Datadog sockets will be mounted at this prefix + 'datadog'. | `string` | `"/var/run/"` | no |
 | <a name="input_context"></a> [context](#input\_context) | Single object for setting entire context at once.<br/>See description of individual variables for details.<br/>Leave string and numeric variables as `null` to use default value.<br/>Individual variable settings (non-null) override settings in context object,<br/>except for attributes, tags, and additional\_tag\_map, which are merged. | `any` | <pre>{<br/>  "additional_tag_map": {},<br/>  "attributes": [],<br/>  "delimiter": null,<br/>  "descriptor_formats": {},<br/>  "enabled": true,<br/>  "environment": null,<br/>  "id_length_limit": null,<br/>  "label_key_case": null,<br/>  "label_order": [],<br/>  "label_value_case": null,<br/>  "labels_as_tags": [<br/>    "unset"<br/>  ],<br/>  "name": null,<br/>  "namespace": null,<br/>  "regex_replace_chars": null,<br/>  "stage": null,<br/>  "tags": {},<br/>  "tenant": null<br/>}</pre> | no |
 | <a name="input_cws"></a> [cws](#input\_cws) | Configuration for Datadog Cloud Workload Security (CWS) | <pre>object({<br/>    enabled          = optional(bool, false)<br/>    cpu              = optional(number)<br/>    memory_limit_mib = optional(number)<br/>  })</pre> | <pre>{<br/>  "enabled": false<br/>}</pre> | no |
-| <a name="input_dd_log_collection"></a> [dd\_log\_collection](#input\_dd\_log\_collection) | Configuration for Datadog Log Collection | <pre>object({<br/>    enabled = optional(bool, false)<br/>    fluentbit_config = optional(object({<br/>      registry                         = optional(string, "public.ecr.aws/aws-observability/aws-for-fluent-bit")<br/>      image_version                    = optional(string, "stable")<br/>      cpu                              = optional(number)<br/>      memory_limit_mib                 = optional(number)<br/>      is_log_router_essential          = optional(bool, false)<br/>      is_log_router_dependency_enabled = optional(bool, false)<br/>      environment = optional(list(object({<br/>        name  = string<br/>        value = string<br/>      })), [])<br/>      log_router_health_check = optional(object({<br/>        command      = optional(list(string))<br/>        interval     = optional(number)<br/>        retries      = optional(number)<br/>        start_period = optional(number)<br/>        timeout      = optional(number)<br/>        }),<br/>        {<br/>          command      = ["CMD-SHELL", "exit 0"]<br/>          interval     = 5<br/>          retries      = 3<br/>          start_period = 15<br/>          timeout      = 5<br/>        }<br/>      )<br/>      firelens_options = optional(object({<br/>        config_file_type  = optional(string)<br/>        config_file_value = optional(string)<br/>      }))<br/>      log_driver_configuration = optional(object({<br/>        host_endpoint = optional(string, "http-intake.logs.datadoghq.com")<br/>        tls           = optional(bool)<br/>        compress      = optional(string)<br/>        service_name  = optional(string)<br/>        source_name   = optional(string)<br/>        message_key   = optional(string)<br/>        }),<br/>        {<br/>          host_endpoint = "http-intake.logs.datadoghq.com"<br/>        }<br/>      )<br/>      mountPoints = optional(list(object({<br/>        sourceVolume : string,<br/>        containerPath : string,<br/>        readOnly : bool<br/>      })), [])<br/>      dependsOn = optional(list(object({<br/>        containerName : string,<br/>        condition : string<br/>      })), [])<br/>      }),<br/>      {<br/>        fluentbit_config = {<br/>          registry      = "public.ecr.aws/aws-observability/aws-for-fluent-bit"<br/>          image_version = "stable"<br/>          log_driver_configuration = {<br/>            host_endpoint = "http-intake.logs.datadoghq.com"<br/>          }<br/>        }<br/>      }<br/>    )<br/>  })</pre> | <pre>{<br/>  "enabled": false,<br/>  "fluentbit_config": {<br/>    "is_log_router_essential": false,<br/>    "log_driver_configuration": {<br/>      "host_endpoint": "http-intake.logs.datadoghq.com"<br/>    }<br/>  }<br/>}</pre> | no |
 | <a name="input_dogstatsd"></a> [dogstatsd](#input\_dogstatsd) | Configuration for Datadog DogStatsD | <pre>object({<br/>    enabled                  = optional(bool, true)<br/>    origin_detection_enabled = optional(bool, true)<br/>    dogstatsd_cardinality    = optional(string, "orchestrator")<br/>    socket_enabled           = optional(bool, true)<br/>  })</pre> | <pre>{<br/>  "dogstatsd_cardinality": "orchestrator",<br/>  "enabled": true,<br/>  "origin_detection_enabled": true,<br/>  "socket_enabled": true<br/>}</pre> | no |
 | <a name="input_ecs_cluster_arn"></a> [ecs\_cluster\_arn](#input\_ecs\_cluster\_arn) | ARN of the ECS cluster. When provided, IAM policies will be scoped to this cluster. If not provided, policies will use wildcard resources. | `string` | `null` | no |
 | <a name="input_ecs_task_definition_arn"></a> [ecs\_task\_definition\_arn](#input\_ecs\_task\_definition\_arn) | ARN of the ECS task definition. When provided, task-specific IAM permissions will be scoped to this task definition. Use with ecs\_cluster\_arn for granular permissions. | `string` | `null` | no |
 | <a name="input_image_version"></a> [image\_version](#input\_image\_version) | Datadog Agent image version | `string` | `"latest"` | no |
-| <a name="input_is_agent_dependency_enabled"></a> [is\_agent\_dependency\_enabled](#input\_is\_agent\_dependency\_enabled) | Whether the Datadog Agent container is a dependency for other containers | `bool` | `false` | no |
 | <a name="input_kms_key_id"></a> [kms\_key\_id](#input\_kms\_key\_id) | KMS Key identifier to encrypt Datadog API key secret if a new secret is created. Can be in any of the formats: Key ID, Key ARN, Alias Name, Alias ARN | `string` | `null` | no |
+| <a name="input_log_collection"></a> [log\_collection](#input\_log\_collection) | Configuration for Datadog Log Collection | <pre>object({<br/>    enabled = optional(bool, false)<br/>    fluentbit_config = optional(object({<br/>      registry                         = optional(string, "public.ecr.aws/aws-observability/aws-for-fluent-bit")<br/>      image_version                    = optional(string, "stable")<br/>      cpu                              = optional(number)<br/>      memory_limit_mib                 = optional(number)<br/>      is_log_router_essential          = optional(bool, false)<br/>      is_log_router_dependency_enabled = optional(bool, false)<br/>      environment = optional(list(object({<br/>        name  = string<br/>        value = string<br/>      })), [])<br/>      log_router_health_check = optional(object({<br/>        command      = optional(list(string))<br/>        interval     = optional(number)<br/>        retries      = optional(number)<br/>        start_period = optional(number)<br/>        timeout      = optional(number)<br/>        }),<br/>        {<br/>          command      = ["CMD-SHELL", "exit 0"]<br/>          interval     = 5<br/>          retries      = 3<br/>          start_period = 15<br/>          timeout      = 5<br/>        }<br/>      )<br/>      firelens_options = optional(object({<br/>        config_file_type  = optional(string)<br/>        config_file_value = optional(string)<br/>      }))<br/>      log_driver_configuration = optional(object({<br/>        host_endpoint = optional(string, "http-intake.logs.datadoghq.com")<br/>        tls           = optional(bool)<br/>        compress      = optional(string)<br/>        service_name  = optional(string)<br/>        source_name   = optional(string)<br/>        message_key   = optional(string)<br/>        }),<br/>        {<br/>          host_endpoint = "http-intake.logs.datadoghq.com"<br/>        }<br/>      )<br/>      mountPoints = optional(list(object({<br/>        sourceVolume : string,<br/>        containerPath : string,<br/>        readOnly : bool<br/>      })), [])<br/>      dependsOn = optional(list(object({<br/>        containerName : string,<br/>        condition : string<br/>      })), [])<br/>      }),<br/>      {<br/>        fluentbit_config = {<br/>          registry      = "public.ecr.aws/aws-observability/aws-for-fluent-bit"<br/>          image_version = "stable"<br/>          log_driver_configuration = {<br/>            host_endpoint = "http-intake.logs.datadoghq.com"<br/>          }<br/>        }<br/>      }<br/>    )<br/>  })</pre> | <pre>{<br/>  "enabled": false,<br/>  "fluentbit_config": {<br/>    "is_log_router_essential": false,<br/>    "log_driver_configuration": {<br/>      "host_endpoint": "http-intake.logs.datadoghq.com"<br/>    }<br/>  }<br/>}</pre> | no |
 | <a name="input_registry"></a> [registry](#input\_registry) | Datadog Agent image registry | `string` | `"public.ecr.aws/datadog/agent"` | no |
 | <a name="input_runtime_platform"></a> [runtime\_platform](#input\_runtime\_platform) | Configuration for `runtime_platform` that containers in your task may use | <pre>object({<br/>    cpu_architecture        = optional(string, "X86_64")<br/>    operating_system_family = optional(string, "LINUX")<br/>  })</pre> | <pre>{<br/>  "cpu_architecture": "X86_64",<br/>  "operating_system_family": "LINUX"<br/>}</pre> | no |
 | <a name="input_service_name"></a> [service\_name](#input\_service\_name) | The service name for Datadog Unified Service Tagging (UST). Sets the `DD_SERVICE` environment variable and `com.datadoghq.tags.service` Docker label. Should identify the service across all environments (e.g., 'web-api', 'payment-service'). | `string` | `null` | no |
