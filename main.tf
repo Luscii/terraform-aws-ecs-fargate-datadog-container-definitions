@@ -28,7 +28,7 @@ module "label" {
 
 check "validate_stage" {
   assert {
-    condition     = var.context != null && var.stage != null && module.label.stage != null
+    condition     = try(var.context.stage != null, false) || var.stage != null
     error_message = "stage needs to be set either via context or stage variable. This is used for Unified Service Tagging."
   }
 }
