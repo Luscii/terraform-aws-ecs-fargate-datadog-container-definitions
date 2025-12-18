@@ -36,3 +36,5 @@ node_modules/
 *.tfplan
 # ignore local terraform variables file
 local.tfvars
+examples/*/.terraform/
+examples/*/.terraform.lock.hcl

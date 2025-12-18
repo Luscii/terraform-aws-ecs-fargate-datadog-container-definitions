@@ -19,5 +19,8 @@ skip-check:
 - CKV_AWS_260
 # Top-level permissions for Github Actions are allowed to be write-all for now
 - CKV2_GHA_1
+# Disable CKV2_AWS_57 as we secret rotation via AWS Secrets Manager is not required for our use case at the moment
+# https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/bc-aws-2-57
+- CKV2_AWS_57
 
 summary-position: top
