@@ -117,8 +117,6 @@ module "datadog_containers" {
     cpu              = 128
     memory_limit_mib = 256
   }
-
-  dd_is_datadog_dependency_enabled = true
 }
 
 locals {
