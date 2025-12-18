@@ -48,7 +48,7 @@ check "validate_ust_variables" {
 
   assert {
     condition     = !local.datadog_enabled || module.label.stage != null
-    error_message = "stage (via module.label.stage) is required when Datadog is enabled. This is used for Unified Service Tagging."
+    error_message = "stage is required when Datadog is enabled. Set it via the `stage` variable or `context.stage`; module.label.stage is the merged result used for Unified Service Tagging."
   }
 
   assert {
