@@ -39,10 +39,10 @@ Users combine the Datadog containers with their application containers:
 module "datadog_containers" {
   source = "..."
 
-  api_key_secret   = { arn = "..." }
-  service_name        = "my-service"
-  stage               = "production"
-  service_version     = "1.0.0"
+  api_key           = { arn = "..." }
+  service_name      = "my-service"
+  stage             = "production"
+  service_version   = "1.0.0"
 }
 
 locals {
