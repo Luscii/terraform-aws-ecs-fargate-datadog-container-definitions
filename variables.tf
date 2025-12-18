@@ -96,7 +96,7 @@ variable "registry" {
 variable "image_version" {
   description = "Datadog Agent image version"
   type        = string
-  default     = "latest"
+  default     = "7"
   nullable    = false
 }
 
