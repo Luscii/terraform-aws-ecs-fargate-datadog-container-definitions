@@ -38,7 +38,7 @@ categories:
     labels:
       - bug
       - fix
-  - title: "🏗️ Module Updates"
+  - title: "🛠️ Chores & Enhancements"
     labels:
       - infrastructure
   - title: "📚 Documentation"
@@ -51,12 +51,6 @@ categories:
     labels:
       - dependencies
     collapse-after: 3
-  - title: "🔧 Internal Changes"
-    labels:
-      - "version: patch"
-      - maintenance
-      - chore
-    collapse-after: 5
 
 exclude-labels:
   - skip-changelog
