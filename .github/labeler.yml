@@ -33,6 +33,8 @@ labels:
     branch: "^fix/.+"
   - label: bug
     branch: "^bug/.+"
+  - label: chore
+    branch: "^chore/.+"
 
   # Type Labels (based on conventional commit title)
   - label: feature
@@ -40,8 +42,6 @@ labels:
   - label: bug
     title: "^fix(!)?:"
   - label: chore
-    title: "^chore(!)?:"
-  - label: maintenance
     title: "^chore(!)?:"
 
   # File-based labels
@@ -54,8 +54,8 @@ labels:
       - "examples\\/.*"
   - label: "infrastructure"
     files:
-      - "^(?!examples\\/).*\\.tf$"
-      - "^(?!examples\\/).*\\.tfvars$"
+      - "^[^/]+\\.tf$"
+      - "^[^/]+\\.tfvars$"
   - label: "build definition"
     files:
       - "\\.github\\/workflows\\/.*\\.yml"

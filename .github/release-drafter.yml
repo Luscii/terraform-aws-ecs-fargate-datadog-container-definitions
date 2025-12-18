@@ -62,10 +62,6 @@ categories:
 
 exclude-labels:
   - skip-changelog
-  - internal
-  - "build definition"
-  - "AI: instructions"
-  - "AI: agents"
 
 replacers:
   - search: '/^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(!)?:\s*/i'

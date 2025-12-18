@@ -19,6 +19,42 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+      - name: Changelog should only show relevant items for end users
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.CI_GITHUB_TOKEN }}
+          script: |
+            const relevantLabels = ['infrastructure', 'documentation', 'examples', 'version: major']
+            const prNumber = context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const labels = pr.labels.map(label => label.name.toLowerCase());
+            if (labels.some(label => relevantLabels.includes(label))) {
+              // Remove skip-changelog label
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: 'skip-changelog',
+              }).catch(error => {
+                if (error.status === 404) {
+                  console.log('skip-changelog label not found, nothing to remove.');
+                } else {
+                  throw error;
+                }
+              });
+            } else {
+              // Add skip-changelog label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: ['skip-changelog'],
+              });
+            }
   validate:
     uses: ./.github/workflows/validate.yml
     secrets:
