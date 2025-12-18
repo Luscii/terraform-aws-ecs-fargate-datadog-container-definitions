@@ -178,7 +178,6 @@ variable "agent_cluster_name" {
 variable "service_name" {
   description = "The service name for Datadog Unified Service Tagging (UST). Sets the `DD_SERVICE` environment variable and `com.datadoghq.tags.service` Docker label. Should identify the service across all environments (e.g., 'web-api', 'payment-service')."
   type        = string
-  default     = null
 }
 
 variable "stage" {
@@ -190,7 +189,6 @@ variable "stage" {
 variable "service_version" {
   description = "The version identifier for Datadog Unified Service Tagging (UST). Sets the `DD_VERSION` environment variable and `com.datadoghq.tags.version` Docker label. Should identify the application version (e.g., 'v1.2.3', git commit SHA)."
   type        = string
-  default     = null
 }
 
 variable "dogstatsd" {

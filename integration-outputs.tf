@@ -55,24 +55,20 @@ locals {
       }
     ] : [],
     # Unified Service Tagging
-    module.label.stage != null ? [
+    [
       {
         name  = "DD_ENV"
         value = module.label.stage
-      }
-    ] : [],
-    var.service_name != null ? [
+      },
       {
         name  = "DD_SERVICE"
         value = var.service_name
-      }
-    ] : [],
-    var.service_version != null ? [
+      },
       {
         name  = "DD_VERSION"
         value = var.service_version
       }
-    ] : []
+    ]
   )
 
   # Build mount points list
@@ -96,17 +92,11 @@ locals {
   )
 
   # Build docker labels map
-  datadog_docker_labels = merge(
-    module.label.stage != null ? {
-      "com.datadoghq.tags.env" = module.label.stage
-    } : {},
-    var.service_name != null ? {
-      "com.datadoghq.tags.service" = var.service_name
-    } : {},
-    var.service_version != null ? {
-      "com.datadoghq.tags.version" = var.service_version
-    } : {}
-  )
+  datadog_docker_labels = {
+    "com.datadoghq.tags.env"     = module.label.stage,
+    "com.datadoghq.tags.service" = var.service_name,
+    "com.datadoghq.tags.version" = var.service_version
+  }
 }
 
 output "container_environment_variables" {
