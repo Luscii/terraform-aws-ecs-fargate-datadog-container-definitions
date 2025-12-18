@@ -13,6 +13,30 @@ locals {
   install_info_installer_version = local.version
 }
 
+################################################################################
+# CloudPosse Label Module for Resource Naming
+################################################################################
+
+module "label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  context    = var.context
+  stage      = var.stage
+  attributes = ["dd"]
+}
+
+check "validate_stage" {
+  assert {
+    condition     = var.context != null && var.stage != null && module.label.stage != null
+    error_message = "stage needs to be set either via context or stage variable. This is used for Unified Service Tagging."
+  }
+}
+
+# ############################################## #
+# Local values for Datadog container definitions #
+# ############################################## #
+
 locals {
 
   is_linux               = var.runtime_platform == null || try(var.runtime_platform.operating_system_family == null, true) || try(var.runtime_platform.operating_system_family == "LINUX", true)

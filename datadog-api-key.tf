@@ -3,18 +3,6 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2025-present Datadog, Inc.
 
-################################################################################
-# CloudPosse Label Module for Resource Naming
-################################################################################
-
-module "label" {
-  source  = "cloudposse/label/null"
-  version = "0.25.0"
-
-  context    = var.context
-  stage      = var.stage
-  attributes = ["dd"]
-}
 
 ################################################################################
 # Datadog API Key Secret Management
