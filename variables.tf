@@ -86,18 +86,31 @@ variable "kms_key_id" {
   default     = null
 }
 
-variable "agent_image" {
-  description = "Datadog Agent image registry"
+variable "ecr_registry_url" {
+  description = "ECR registry URL for pull-through cache (e.g., '123456789012.dkr.ecr.eu-west-1.amazonaws.com'). When provided together with pull_cache_prefix in image configuration, container images will be pulled through ECR instead of directly from the source registry. Leave null to pull directly from source registries (Docker Hub, etc.)."
   type        = string
-  default     = "public.ecr.aws/datadog/agent"
-  nullable    = false
+  default     = null
 }
 
-variable "agent_image_version" {
-  description = "Datadog Agent image version"
+variable "agent_image" {
+  description = "Datadog Agent container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/agent'). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'agent_image_tag'."
+  type = object({
+    repository        = optional(string, "datadog/agent")
+    pull_cache_prefix = optional(string, "")
+  })
+  default = {}
+}
+
+variable "agent_image_tag" {
+  description = "Datadog Agent container image tag"
   type        = string
   default     = "7"
   nullable    = false
+
+  validation {
+    condition     = var.agent_image_tag != "latest"
+    error_message = "Image tag must not be 'latest'. Use a specific version tag instead."
+  }
 }
 
 variable "agent_cpu" {
@@ -235,13 +248,32 @@ variable "apm" {
   }
 }
 
+variable "log_router_image" {
+  description = "Fluent Bit log router container image configuration. The repository should be the path without registry or tag (e.g., 'aws-observability/aws-for-fluent-bit'). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'ecr-public') when using ECR pull cache. The tag is specified separately in 'log_router_image_tag'."
+  type = object({
+    repository        = optional(string, "aws-observability/aws-for-fluent-bit")
+    pull_cache_prefix = optional(string, "")
+  })
+  default = {}
+}
+
+variable "log_router_image_tag" {
+  description = "Fluent Bit log router container image tag"
+  type        = string
+  default     = "stable"
+  nullable    = false
+
+  validation {
+    condition     = var.log_router_image_tag != "latest"
+    error_message = "Image tag must not be 'latest'. Use a specific version tag instead (e.g., 'stable', '2.31.0')."
+  }
+}
+
 variable "log_collection" {
   description = "Configuration for Datadog Log Collection"
   type = object({
     enabled = optional(bool, false)
     fluentbit_config = optional(object({
-      registry                         = optional(string, "public.ecr.aws/aws-observability/aws-for-fluent-bit")
-      image_version                    = optional(string, "stable")
       cpu                              = optional(number)
       memory_limit_mib                 = optional(number)
       is_log_router_essential          = optional(bool, false)
@@ -293,8 +325,6 @@ variable "log_collection" {
       }),
       {
         fluentbit_config = {
-          registry      = "public.ecr.aws/aws-observability/aws-for-fluent-bit"
-          image_version = "stable"
           log_driver_configuration = {
             host_endpoint = "http-intake.logs.datadoghq.com"
           }
@@ -329,12 +359,31 @@ variable "log_collection" {
   }
 }
 
+variable "cws_image" {
+  description = "Datadog Cloud Workload Security (CWS) instrumentation container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/cws-instrumentation'). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'cws_image_tag'."
+  type = object({
+    repository        = optional(string, "datadog/cws-instrumentation")
+    pull_cache_prefix = optional(string, "")
+  })
+  default = {}
+}
+
+variable "cws_image_tag" {
+  description = "Datadog Cloud Workload Security (CWS) instrumentation container image tag"
+  type        = string
+  default     = "7.73.0"
+  nullable    = false
+
+  validation {
+    condition     = var.cws_image_tag != "latest"
+    error_message = "Image tag must not be 'latest'. Use a specific version tag instead."
+  }
+}
+
 variable "cws" {
   description = "Configuration for Datadog Cloud Workload Security (CWS)"
   type = object({
     enabled          = optional(bool, false)
-    image            = optional(string, "datadog/cws-instrumentation")
-    image_version    = optional(string, "7.73.0")
     cpu              = optional(number)
     memory_limit_mib = optional(number)
   })

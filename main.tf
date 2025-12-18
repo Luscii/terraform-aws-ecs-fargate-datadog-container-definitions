@@ -26,13 +26,6 @@ module "label" {
   attributes = ["dd"]
 }
 
-check "validate_stage" {
-  assert {
-    condition     = try(var.context.stage != null, false) || var.stage != null
-    error_message = "stage needs to be set either via context or stage variable. This is used for Unified Service Tagging."
-  }
-}
-
 # ############################################## #
 # Local values for Datadog container definitions #
 # ############################################## #
@@ -41,6 +34,26 @@ locals {
 
   is_linux               = var.runtime_platform == null || try(var.runtime_platform.operating_system_family == null, true) || try(var.runtime_platform.operating_system_family == "LINUX", true)
   is_fluentbit_supported = var.log_collection.enabled && local.is_linux
+
+  # Container image URL construction
+  # Builds full image URLs with ECR pull cache support when ecr_registry_url is provided
+  agent_image_url = (
+    var.ecr_registry_url != null && var.agent_image.pull_cache_prefix != "" ?
+    "${var.ecr_registry_url}/${var.agent_image.pull_cache_prefix}/${var.agent_image.repository}:${var.agent_image_tag}" :
+    "${var.agent_image.repository}:${var.agent_image_tag}"
+  )
+
+  log_router_image_url = (
+    var.ecr_registry_url != null && var.log_router_image.pull_cache_prefix != "" ?
+    "${var.ecr_registry_url}/${var.log_router_image.pull_cache_prefix}/${var.log_router_image.repository}:${var.log_router_image_tag}" :
+    "${var.log_router_image.repository}:${var.log_router_image_tag}"
+  )
+
+  cws_image_url = (
+    var.ecr_registry_url != null && var.cws_image.pull_cache_prefix != "" ?
+    "${var.ecr_registry_url}/${var.cws_image.pull_cache_prefix}/${var.cws_image.repository}:${var.cws_image_tag}" :
+    "${var.cws_image.repository}:${var.cws_image_tag}"
+  )
 
   # Datadog Firelens log configuration
   dd_firelens_log_configuration = local.is_fluentbit_supported ? merge(
@@ -212,7 +225,7 @@ locals {
         cpu                    = 0
         memory                 = 128
         name                   = "init-volume"
-        image                  = "${var.agent_image}:${var.agent_image_version}"
+        image                  = local.agent_image_url
         essential              = false
         readOnlyRootFilesystem = true
         command                = ["/bin/sh", "-c", "cp -vnR /etc/datadog-agent/* /agent-config/ && exit 0"]
@@ -229,7 +242,7 @@ locals {
       merge(
         {
           name         = "datadog-agent"
-          image        = "${var.agent_image}:${var.agent_image_version}"
+          image        = local.agent_image_url
           essential    = var.agent_essential
           environment  = local.dd_agent_env
           dockerLabels = var.agent_docker_labels
@@ -277,7 +290,7 @@ locals {
     merge(
       {
         name      = "datadog-log-router"
-        image     = "${var.log_collection.fluentbit_config.registry}:${var.log_collection.fluentbit_config.image_version}"
+        image     = local.log_router_image_url
         essential = var.log_collection.fluentbit_config.is_log_router_essential
         firelensConfiguration = {
           type = "fluentbit"
@@ -316,7 +329,7 @@ locals {
   dd_cws_container = local.is_cws_supported ? [
     {
       name             = "cws-instrumentation-init"
-      image            = "${var.cws.image}:${var.cws.image_version}"
+      image            = local.cws_image_url
       cpu              = var.cws.cpu
       memory_limit_mib = var.cws.memory_limit_mib
       user             = "0"
