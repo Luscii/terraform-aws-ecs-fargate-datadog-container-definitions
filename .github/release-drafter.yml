@@ -1,6 +1,7 @@
 name-template: "v$RESOLVED_VERSION"
 tag-template: "$RESOLVED_VERSION"
-change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+category-template: "### $TITLE"
+change-template: "- $TITLE (#$NUMBER)"
 no-changes-template: "- No changes"
 
 template: |
@@ -24,8 +25,6 @@ version-resolver:
   patch:
     labels:
       - "version: patch"
-      - "bug"
-      - "dependencies"
   default: patch
 
 categories:
@@ -40,7 +39,7 @@ categories:
     labels:
       - bug
       - fix
-  - title: "🏗️ Module Updates"
+  - title: "🛠️ Module changes"
     labels:
       - infrastructure
   - title: "📚 Documentation"
@@ -53,18 +52,12 @@ categories:
     labels:
       - dependencies
     collapse-after: 3
-  - title: "🔧 Internal Changes"
-    labels:
-      - "version: patch"
-      - maintenance
-      - chore
-    collapse-after: 5
 
 exclude-labels:
   - skip-changelog
 
 replacers:
-  - search: '/^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(!)?:\s*/i'
+  - search: '/\b(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(!)?:\s*/i'
     replace: ''
   - search: '/\b(fix|close|resolve)(s|d)?\s+(#\d+)/gi'
     replace: 'fixes #$3'
