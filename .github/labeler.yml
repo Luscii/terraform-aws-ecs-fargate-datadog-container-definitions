@@ -10,6 +10,8 @@ labels:
   - label: "version: patch"
     branch: "^bug/.+"
   - label: "version: patch"
+    branch: "^fix/.+"
+  - label: "version: patch"
     branch: "^hotfix/.+"
   - label: "version: patch"
     branch: "^cleanup/.+"
