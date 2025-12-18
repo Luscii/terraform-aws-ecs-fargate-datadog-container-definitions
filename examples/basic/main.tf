@@ -16,9 +16,9 @@ module "datadog_container_definitions" {
   dd_site = var.datadog_site
 
   # Unified Service Tagging (required)
-  dd_service = var.service_name
-  dd_env     = var.environment
-  dd_version = var.app_version
+  service_name    = var.service_name
+  stage           = var.environment
+  service_version = var.app_version
 }
 
 ################################################################################

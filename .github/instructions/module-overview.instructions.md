@@ -39,9 +39,10 @@ Users combine the Datadog containers with their application containers:
 module "datadog_containers" {
   source = "..."
   
-  dd_api_key_secret = { arn = "..." }
-  dd_service = "my-service"
-  dd_env     = "production"
+  api_key_secret   = { arn = "..." }
+  service_name        = "my-service"
+  stage               = "production"
+  service_version     = "1.0.0"
 }
 
 locals {
@@ -84,7 +85,7 @@ This module is based on DataDog's official module. To update to a newer version:
 
 1. Check the latest release at https://github.com/DataDog/terraform-aws-ecs-datadog/releases
 2. Review the `modules/ecs_fargate/datadog.tf` file for container definition logic
-3. Extract only the Datadog container definitions (dd_agent_container, dd_log_container, dd_cws_container)
+3. Extract only the Datadog container definitions (agent_container, log_router_container, cws_container)
 4. DO NOT include the `modified_container_definitions` logic that processes user containers
 5. Update the version number in `main.tf` (local.version)
 6. Test thoroughly with representative examples
