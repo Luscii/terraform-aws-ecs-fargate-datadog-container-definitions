@@ -94,8 +94,8 @@ locals {
   # Build docker labels map
   datadog_docker_labels = {
     "com.datadoghq.tags.env"     = module.label.stage,
-    "com.datadoghq.tags.service" = length(trim(var.service_name)) > 0 ? trim(var.service_name) : "unknown",
-    "com.datadoghq.tags.version" = length(trim(var.service_version)) > 0 ? trim(var.service_version) : "unknown"
+    "com.datadoghq.tags.service" = length(trimspace(var.service_name)) > 0 ? trimspace(var.service_name) : "unknown",
+    "com.datadoghq.tags.version" = length(trimspace(var.service_version)) > 0 ? trimspace(var.service_version) : "unknown"
   }
 }
 

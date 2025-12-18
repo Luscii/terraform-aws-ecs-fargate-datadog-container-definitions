@@ -36,7 +36,11 @@ locals {
   is_fluentbit_supported = var.log_collection.enabled && local.is_linux
 
   # Container image URL construction
-  # Builds full image URLs with ECR pull cache support when ecr_registry_url is provided
+  # Builds full image URLs with ECR pull cache support when ecr_registry_url is provided.
+  # When ECR is not used (ecr_registry_url is null or pull_cache_prefix is empty), images
+  # are constructed without a registry prefix (e.g., "datadog/agent:7"). Container runtimes
+  # automatically resolve these as Docker Hub images by implicitly prepending "docker.io/".
+  # This follows standard Docker image resolution behavior.
   agent_image_url = (
     var.ecr_registry_url != null && var.agent_image.pull_cache_prefix != "" ?
     "${var.ecr_registry_url}/${var.agent_image.pull_cache_prefix}/${var.agent_image.repository}:${var.agent_image_tag}" :
