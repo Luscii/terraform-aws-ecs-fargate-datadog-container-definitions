@@ -10,7 +10,7 @@ Module providing Datadog container definitions for ECS Fargate tasks.
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  dd_api_key = {
+  api_key = {
     value = "your-datadog-api-key"  # Or use value_from_arn for existing secret
   }
 
@@ -71,7 +71,7 @@ resource "aws_ecs_task_definition" "this" {
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  dd_api_key = {
+  api_key = {
     value_from_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key-abc123"
   }
 
@@ -87,7 +87,7 @@ module "datadog_containers" {
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  dd_api_key = {
+  api_key = {
     value = var.datadog_api_key
   }
 
@@ -117,8 +117,6 @@ module "datadog_containers" {
     cpu              = 128
     memory_limit_mib = 256
   }
-
-  dd_is_datadog_dependency_enabled = true
 }
 
 locals {
@@ -187,7 +185,7 @@ The module exposes IAM policy documents through outputs:
 module "datadog_containers" {
   source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
 
-  dd_api_key = {
+  api_key = {
     value_from_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:datadog-api-key"
   }
   service_name    = "my-service"
