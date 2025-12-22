@@ -13,17 +13,9 @@ check "validate_stage" {
     error_message = "stage needs to be set either via context or stage variable. This is used for Unified Service Tagging."
   }
 }
-
-check "validate_ecr_registry_url" {
+check "validate_api_key" {
   assert {
-    condition = (
-      var.ecr_registry_url != null ||
-      (
-        var.agent_image.pull_cache_prefix == "" &&
-        var.log_router_image.pull_cache_prefix == "" &&
-        var.cws_image.pull_cache_prefix == ""
-      )
-    )
-    error_message = "When any image has a pull_cache_prefix set, ecr_registry_url must be provided. Either set ecr_registry_url or remove all pull_cache_prefix values."
+    condition     = var.api_key != null && (var.api_key.value != null || var.api_key.value_from_arn != null)
+    error_message = "Datadog API key must be provided. Set var.api_key with either 'value' (for new secret creation) or 'value_from_arn' (for existing secret)."
   }
 }

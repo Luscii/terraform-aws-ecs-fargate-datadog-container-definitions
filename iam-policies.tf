@@ -12,7 +12,7 @@
 data "aws_iam_policy_document" "task_execution_role" {
   # Include the policy from service-secrets module if it exists
   source_policy_documents = compact([
-    module.api_key_secret.iam_policy_document
+    module.service_secrets.iam_policy_document
   ])
 }
 
@@ -27,15 +27,12 @@ data "aws_iam_policy_document" "task_role" {
       "ecs:ListContainerInstances",
       "ecs:DescribeContainerInstances"
     ]
-    resources = var.ecs_cluster_arn != null ? [
-      var.ecs_cluster_arn,
-      "${var.ecs_cluster_arn}/*"
-    ] : ["*"]
+    resources = [data.aws_ecs_cluster.this.arn]
   }
 
   # Additional statement for describing tasks if cluster ARN is provided
   dynamic "statement" {
-    for_each = var.ecs_cluster_arn != null ? [1] : []
+    for_each = data.aws_ecs_cluster.this.arn != null ? [1] : []
     content {
       sid    = "DatadogECSTaskDescribe"
       effect = "Allow"
@@ -47,7 +44,7 @@ data "aws_iam_policy_document" "task_role" {
       resources = var.ecs_task_definition_arn != null ? [
         var.ecs_task_definition_arn
         ] : [
-        "${var.ecs_cluster_arn}/*"
+        "${data.aws_ecs_cluster.this.arn}/*"
       ]
     }
   }

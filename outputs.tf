@@ -63,3 +63,13 @@ output "pull_cache_prefixes" {
   description = "Set of unique ECR pull cache prefixes used by Datadog containers. Use this to set up ECR pull through cache rules and IAM policies in the calling module."
   value       = local.pull_cache_prefixes
 }
+
+output "pull_cache_rule_urls" {
+  description = "Map of ECR pull cache rule URLs keyed by pull cache prefix. Use this to configure container image URLs in Datadog container definitions."
+  value       = local.pull_cache_rule_urls
+}
+
+output "pull_cache_rule_arns" {
+  description = "Map of ECR pull cache rule ARNs keyed by pull cache prefix. Use this to configure IAM policies if needed."
+  value       = local.pull_cache_rule_arns
+}
