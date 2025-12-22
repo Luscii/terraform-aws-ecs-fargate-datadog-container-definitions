@@ -80,14 +80,96 @@ variable "api_key" {
   }
 }
 
-variable "kms_key_id" {
-  description = "KMS Key identifier to encrypt Datadog API key secret if a new secret is created. Can be in any of the formats: Key ID, Key ARN, Alias Name, Alias ARN"
-  type        = string
-  default     = null
+variable "secrets" {
+  type = map(object({
+    value          = optional(string)
+    description    = optional(string)
+    value_from_arn = optional(string)
+  }))
+  sensitive   = true
+  description = "Map of secrets for the Datadog containers, each key will be the name. When the value is set, a secret is created. Otherwise the arn of existing secret is added to the outputs."
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for key, value in var.secrets : contains(keys(value), "value") || contains(keys(value), "value_from_arn")
+    ])
+    error_message = "value or value_from_arn must be set for each secret"
+  }
+
+  validation {
+    condition = alltrue([
+      for key, value in var.secrets : value.value != null && value.value_from_arn != null ? false : true
+    ])
+    error_message = "value and value_from_arn cannot be set at the same time"
+  }
+
+  validation {
+    condition = alltrue([
+      for key, value in var.secrets :
+      value.value_from_arn == null ? true :
+      length(regexall("^arn:aws:secretsmanager:[a-zA-Z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9-_/]+-[a-zA-Z0-9]{6}$", value.value_from_arn)) > 0
+    ])
+    error_message = "The value_from_arn must be a valid Secrets Manager ARN with format: arn:aws:secretsmanager:region:account-id:secret:secret-name-suffix"
+  }
 }
 
-variable "ecr_registry_url" {
-  description = "ECR registry URL for pull-through cache (e.g., '123456789012.dkr.ecr.eu-west-1.amazonaws.com'). When provided together with pull_cache_prefix in image configuration, container images will be pulled through ECR instead of directly from the source registry. Leave null to pull directly from source registries (Docker Hub, etc.)."
+variable "parameters" {
+  type = map(
+    object({
+      data_type      = optional(string, "text")
+      description    = optional(string)
+      sensitive      = optional(bool, false)
+      tier           = optional(string, "Advanced")
+      value          = optional(string)
+      value_from_arn = optional(string)
+    })
+  )
+  description = "Map of parameters for the Datadog containers, each key will be the name. When the value is set, a parameter is created. Otherwise the arn of existing parameter is added to the outputs."
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for key, value in var.parameters : (value.value != null) || (value.value_from_arn != null)
+    ])
+    error_message = "Either value or value_from_arn must be set for each parameter"
+  }
+
+  validation {
+    condition = alltrue([
+      for key, value in var.parameters : (value.value != null && value.value_from_arn != null) ? false : true
+    ])
+    error_message = "value and value_from_arn cannot be set at the same time for a parameter"
+  }
+
+  validation {
+    condition = alltrue([
+      for key, value in var.parameters :
+      value.value_from_arn == null ? true :
+      length(regexall("^arn:aws:ssm:[a-zA-Z0-9-]+:[0-9]{12}:parameter/[a-zA-Z0-9-_/]+$", value.value_from_arn)) > 0
+    ])
+    error_message = "The value_from_arn must be a valid SSM parameter ARN with format: arn:aws:ssm:region:account-id:parameter/parameter-name"
+  }
+
+  validation {
+    condition = alltrue([
+      for key, value in var.parameters :
+      contains(["text", "aws:ec2:image", "aws:ssm:integration"], value.data_type)
+    ])
+    error_message = "data_type must be one of: text, aws:ec2:image, aws:ssm:integration"
+  }
+
+  validation {
+    condition = alltrue([
+      for key, value in var.parameters :
+      contains(["Standard", "Advanced", "Intelligent-Tiering"], value.tier)
+    ])
+    error_message = "tier must be one of: Standard, Advanced, Intelligent-Tiering"
+  }
+}
+
+variable "kms_key_id" {
+  description = "KMS Key identifier to encrypt Datadog API key secret if a new secret is created. Can be in any of the formats: Key ID, Key ARN, Alias Name, Alias ARN"
   type        = string
   default     = null
 }
@@ -425,7 +507,7 @@ variable "runtime_platform" {
 # IAM Policy Configuration
 ################################################################################
 
-variable "ecs_cluster_arn" {
+variable "ecs_cluster_name" {
   description = "ARN of the ECS cluster. When provided, IAM policies will be scoped to this cluster. If not provided, policies will use wildcard resources."
   type        = string
   default     = null
