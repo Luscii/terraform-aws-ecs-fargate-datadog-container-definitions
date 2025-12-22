@@ -51,7 +51,7 @@ variable "context" {
 # Datadog ECS Fargate Configuration
 ################################################################################
 
-variable "dd_api_key" {
+variable "api_key" {
   description = "Datadog API Key configuration. Provide either 'value' for plaintext key or 'value_from_arn' for existing secret ARN. When neither is provided, a new secret will be created."
   type = object({
     value          = optional(string)
@@ -63,18 +63,18 @@ variable "dd_api_key" {
 
   validation {
     condition = (
-      var.dd_api_key == null ||
-      (var.dd_api_key.value != null && var.dd_api_key.value_from_arn == null) ||
-      (var.dd_api_key.value == null && var.dd_api_key.value_from_arn != null)
+      var.api_key == null ||
+      (var.api_key.value != null && var.api_key.value_from_arn == null) ||
+      (var.api_key.value == null && var.api_key.value_from_arn != null)
     )
     error_message = "Only one of 'value' or 'value_from_arn' can be set, not both."
   }
 
   validation {
     condition = (
-      var.dd_api_key == null ||
-      var.dd_api_key.value_from_arn == null ||
-      can(regex("^arn:aws:secretsmanager:[a-zA-Z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9-_/]+-[a-zA-Z0-9]{6}$", var.dd_api_key.value_from_arn))
+      var.api_key == null ||
+      var.api_key.value_from_arn == null ||
+      can(regex("^arn:aws:secretsmanager:[a-zA-Z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9-_/]+-[a-zA-Z0-9]{6}$", var.api_key.value_from_arn))
     )
     error_message = "The value_from_arn must be a valid Secrets Manager ARN with format: arn:aws:secretsmanager:region:account-id:secret:secret-name-suffix"
   }
@@ -86,54 +86,60 @@ variable "kms_key_id" {
   default     = null
 }
 
-variable "dd_registry" {
-  description = "Datadog Agent image registry"
+variable "ecr_registry_url" {
+  description = "ECR registry URL for pull-through cache (e.g., '123456789012.dkr.ecr.eu-west-1.amazonaws.com'). When provided together with pull_cache_prefix in image configuration, container images will be pulled through ECR instead of directly from the source registry. Leave null to pull directly from source registries (Docker Hub, etc.)."
   type        = string
-  default     = "public.ecr.aws/datadog/agent"
-  nullable    = false
+  default     = null
 }
 
-variable "dd_image_version" {
-  description = "Datadog Agent image version"
-  type        = string
-  default     = "latest"
-  nullable    = false
+variable "agent_image" {
+  description = "Datadog Agent container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/agent'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (Docker Hub images are automatically resolved with 'docker.io/' prefix by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'agent_image_tag'."
+  type = object({
+    repository        = optional(string, "datadog/agent")
+    pull_cache_prefix = optional(string, "")
+  })
+  default = {}
 }
 
-variable "dd_cpu" {
+variable "agent_image_tag" {
+  description = "Datadog Agent container image tag"
+  type        = string
+  default     = "7"
+  nullable    = false
+
+  validation {
+    condition     = var.agent_image_tag != "latest"
+    error_message = "Image tag must not be 'latest'. Use a specific version tag instead."
+  }
+}
+
+variable "agent_cpu" {
   description = "Datadog Agent container CPU units"
   type        = number
   default     = null
 }
 
-variable "dd_memory_limit_mib" {
+variable "agent_memory_limit_mib" {
   description = "Datadog Agent container memory limit in MiB"
   type        = number
   default     = null
 }
 
-variable "dd_essential" {
+variable "agent_essential" {
   description = "Whether the Datadog Agent container is essential"
   type        = bool
   default     = false
   nullable    = false
 }
 
-variable "dd_is_datadog_dependency_enabled" {
-  description = "Whether the Datadog Agent container is a dependency for other containers"
-  type        = bool
-  default     = false
-  nullable    = false
-}
-
-variable "dd_readonly_root_filesystem" {
+variable "agent_readonly_root_filesystem" {
   description = "Datadog Agent container runs with read-only root filesystem enabled"
   type        = bool
   default     = false
   nullable    = false
 }
 
-variable "dd_health_check" {
+variable "agent_health_check" {
   description = "Datadog Agent health check configuration"
   type = object({
     command      = optional(list(string))
@@ -151,66 +157,54 @@ variable "dd_health_check" {
   }
 }
 
-variable "dd_site" {
+variable "site" {
   description = "Datadog Site"
   type        = string
   default     = "datadoghq.com"
 }
 
-variable "dd_environment" {
-  description = "Datadog Agent container environment variables. Highest precedence and overwrites other environment variables defined by the module. For example, `dd_environment = [ { name = 'DD_VAR', value = 'DD_VAL' } ]`"
+variable "agent_environment" {
+  description = "Datadog Agent container environment variables. Highest precedence and overwrites other environment variables defined by the module. For example, `agent_environment = [ { name = 'DD_VAR', value = 'DD_VAL' } ]`"
   type        = list(map(string))
   default     = [{}]
   nullable    = false
 }
 
-variable "dd_docker_labels" {
+variable "agent_docker_labels" {
   description = "Datadog Agent container docker labels"
   type        = map(string)
   default     = {}
 }
 
-variable "dd_tags" {
+variable "agent_tags" {
   description = "Datadog Agent global tags (eg. `key1:value1, key2:value2`)"
   type        = string
   default     = null
 }
 
-variable "dd_cluster_name" {
-  description = "Datadog cluster name"
+variable "agent_cluster_name" {
+  description = "Override for the Datadog cluster name tag. When not set, the cluster name is automatically detected from ECS metadata API. Only set this if you want to use a different name in Datadog than the actual ECS cluster name."
   type        = string
   default     = null
 }
 
-variable "dd_service" {
-  description = "The task service name. Used for tagging (UST)"
+variable "service_name" {
+  description = "The service name for Datadog Unified Service Tagging (UST). Sets the `DD_SERVICE` environment variable and `com.datadoghq.tags.service` Docker label. Should identify the service across all environments (e.g., 'web-api', 'payment-service')."
+  type        = string
+}
+
+variable "stage" {
+  description = "The environment/stage name for Datadog Unified Service Tagging (UST). Sets the `DD_ENV` environment variable and `com.datadoghq.tags.env` Docker label. Should identify the deployment environment (e.g., 'production', 'staging', 'dev')."
   type        = string
   default     = null
 }
 
-variable "dd_env" {
-  description = "The task environment name. Used for tagging (UST)"
+variable "service_version" {
+  description = "The version identifier for Datadog Unified Service Tagging (UST). Sets the `DD_VERSION` environment variable and `com.datadoghq.tags.version` Docker label. Should identify the application version (e.g., 'v1.2.3', git commit SHA)."
   type        = string
-  default     = null
 }
 
-variable "dd_version" {
-  description = "The task version name. Used for tagging (UST)"
-  type        = string
-  default     = null
-}
-
-variable "dd_checks_cardinality" {
-  description = "Datadog Agent checks cardinality"
-  type        = string
-  default     = null
-  validation {
-    condition     = var.dd_checks_cardinality == null || can(contains(["low", "orchestrator", "high"], var.dd_checks_cardinality))
-    error_message = "The Datadog Agent checks cardinality must be one of 'low', 'orchestrator', 'high', or null."
-  }
-}
-
-variable "dd_dogstatsd" {
+variable "dogstatsd" {
   description = "Configuration for Datadog DogStatsD"
   type = object({
     enabled                  = optional(bool, true)
@@ -225,16 +219,16 @@ variable "dd_dogstatsd" {
     socket_enabled           = true
   }
   validation {
-    condition     = var.dd_dogstatsd != null
+    condition     = var.dogstatsd != null
     error_message = "The Datadog Dogstatsd configuration must be defined."
   }
   validation {
-    condition     = try(var.dd_dogstatsd.dogstatsd_cardinality == null, false) || can(contains(["low", "orchestrator", "high"], var.dd_dogstatsd.dogstatsd_cardinality))
+    condition     = try(var.dogstatsd.dogstatsd_cardinality == null, false) || can(contains(["low", "orchestrator", "high"], var.dogstatsd.dogstatsd_cardinality))
     error_message = "The Datadog Dogstatsd cardinality must be one of 'low', 'orchestrator', 'high', or null."
   }
 }
 
-variable "dd_apm" {
+variable "apm" {
   description = "Configuration for Datadog APM"
   type = object({
     enabled                       = optional(bool, true)
@@ -249,18 +243,37 @@ variable "dd_apm" {
     trace_inferred_proxy_services = false
   }
   validation {
-    condition     = var.dd_apm != null
+    condition     = var.apm != null
     error_message = "The Datadog APM configuration must be defined."
   }
 }
 
-variable "dd_log_collection" {
+variable "log_router_image" {
+  description = "Fluent Bit log router container image configuration. The repository should be the path without registry or tag (e.g., 'aws-observability/aws-for-fluent-bit'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (images are automatically resolved by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'ecr-public') when using ECR pull cache. The tag is specified separately in 'log_router_image_tag'."
+  type = object({
+    repository        = optional(string, "aws-observability/aws-for-fluent-bit")
+    pull_cache_prefix = optional(string, "")
+  })
+  default = {}
+}
+
+variable "log_router_image_tag" {
+  description = "Fluent Bit log router container image tag"
+  type        = string
+  default     = "stable"
+  nullable    = false
+
+  validation {
+    condition     = var.log_router_image_tag != "latest"
+    error_message = "Image tag must not be 'latest'. Use a specific version tag instead (e.g., 'stable', '2.31.0')."
+  }
+}
+
+variable "log_collection" {
   description = "Configuration for Datadog Log Collection"
   type = object({
     enabled = optional(bool, false)
     fluentbit_config = optional(object({
-      registry                         = optional(string, "public.ecr.aws/aws-observability/aws-for-fluent-bit")
-      image_version                    = optional(string, "stable")
       cpu                              = optional(number)
       memory_limit_mib                 = optional(number)
       is_log_router_essential          = optional(bool, false)
@@ -312,8 +325,6 @@ variable "dd_log_collection" {
       }),
       {
         fluentbit_config = {
-          registry      = "public.ecr.aws/aws-observability/aws-for-fluent-bit"
-          image_version = "stable"
           log_driver_configuration = {
             host_endpoint = "http-intake.logs.datadoghq.com"
           }
@@ -331,24 +342,45 @@ variable "dd_log_collection" {
     }
   }
   validation {
-    condition     = var.dd_log_collection != null
+    condition     = var.log_collection != null
     error_message = "The Datadog Log Collection configuration must be defined."
   }
   validation {
-    condition     = try(var.dd_log_collection.enabled == false, false) || try(var.dd_log_collection.enabled == true && var.dd_log_collection.fluentbit_config != null, false)
+    condition     = try(var.log_collection.enabled == false, false) || try(var.log_collection.enabled == true && var.log_collection.fluentbit_config != null, false)
     error_message = "The Datadog Log Collection fluentbit configuration must be defined."
   }
   validation {
-    condition     = try(var.dd_log_collection.enabled == false, false) || try(var.dd_log_collection.enabled == true && var.dd_log_collection.fluentbit_config.log_driver_configuration != null, false)
+    condition     = try(var.log_collection.enabled == false, false) || try(var.log_collection.enabled == true && var.log_collection.fluentbit_config.log_driver_configuration != null, false)
     error_message = "The Datadog Log Collection log driver configuration must be defined."
   }
   validation {
-    condition     = try(var.dd_log_collection.enabled == false, false) || try(var.dd_log_collection.enabled == true && var.dd_log_collection.fluentbit_config.log_driver_configuration.host_endpoint != null, false)
+    condition     = try(var.log_collection.enabled == false, false) || try(var.log_collection.enabled == true && var.log_collection.fluentbit_config.log_driver_configuration.host_endpoint != null, false)
     error_message = "The Datadog Log Collection log driver configuration host endpoint must be defined."
   }
 }
 
-variable "dd_cws" {
+variable "cws_image" {
+  description = "Datadog Cloud Workload Security (CWS) instrumentation container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/cws-instrumentation'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (Docker Hub images are automatically resolved with 'docker.io/' prefix by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'cws_image_tag'."
+  type = object({
+    repository        = optional(string, "datadog/cws-instrumentation")
+    pull_cache_prefix = optional(string, "")
+  })
+  default = {}
+}
+
+variable "cws_image_tag" {
+  description = "Datadog Cloud Workload Security (CWS) instrumentation container image tag"
+  type        = string
+  default     = "7.73.0"
+  nullable    = false
+
+  validation {
+    condition     = var.cws_image_tag != "latest"
+    error_message = "Image tag must not be 'latest'. Use a specific version tag instead."
+  }
+}
+
+variable "cws" {
   description = "Configuration for Datadog Cloud Workload Security (CWS)"
   type = object({
     enabled          = optional(bool, false)
@@ -359,7 +391,7 @@ variable "dd_cws" {
     enabled = false
   }
   validation {
-    condition     = var.dd_cws != null
+    condition     = var.cws != null
     error_message = "The Datadog Cloud Workload Security (CWS) configuration must be defined."
   }
 }

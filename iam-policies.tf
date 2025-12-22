@@ -12,7 +12,7 @@
 data "aws_iam_policy_document" "task_execution_role" {
   # Include the policy from service-secrets module if it exists
   source_policy_documents = compact([
-    module.dd_api_key_secret.iam_policy_document
+    module.api_key_secret.iam_policy_document
   ])
 }
 

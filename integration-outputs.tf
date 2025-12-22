@@ -13,8 +13,8 @@ locals {
   datadog_socket_path = "${var.container_mount_path_prefix}datadog"
 
   # Determine which containers are enabled
-  log_router_enabled = var.dd_log_collection.enabled && local.is_fluentbit_supported
-  cws_enabled        = var.dd_cws.enabled
+  log_router_enabled = var.log_collection.enabled && local.is_fluentbit_supported
+  cws_enabled        = var.cws.enabled
 
   # Build depends_on list based on enabled containers
   datadog_depends_on = concat(
@@ -41,44 +41,40 @@ locals {
   # Build environment variables list
   datadog_environment_variables = concat(
     # APM trace agent URL (only if socket is enabled)
-    var.dd_apm.enabled && var.dd_apm.socket_enabled ? [
+    var.apm.enabled && var.apm.socket_enabled ? [
       {
         name  = "DD_TRACE_AGENT_URL"
         value = "unix://${local.datadog_socket_path}/apm.socket"
       }
     ] : [],
     # DogStatsD URL (only if socket is enabled)
-    var.dd_dogstatsd.enabled && var.dd_dogstatsd.socket_enabled ? [
+    var.dogstatsd.enabled && var.dogstatsd.socket_enabled ? [
       {
         name  = "DD_DOGSTATSD_URL"
         value = "unix://${local.datadog_socket_path}/dsd.socket"
       }
     ] : [],
     # Unified Service Tagging
-    var.dd_env != null ? [
+    [
       {
         name  = "DD_ENV"
-        value = var.dd_env
-      }
-    ] : [],
-    var.dd_service != null ? [
+        value = module.label.stage
+      },
       {
         name  = "DD_SERVICE"
-        value = var.dd_service
-      }
-    ] : [],
-    var.dd_version != null ? [
+        value = var.service_name
+      },
       {
         name  = "DD_VERSION"
-        value = var.dd_version
+        value = var.service_version
       }
-    ] : []
+    ]
   )
 
   # Build mount points list
   datadog_mount_points = concat(
     # Datadog socket volume (only if APM or DogStatsD sockets are enabled)
-    (var.dd_apm.enabled && var.dd_apm.socket_enabled) || (var.dd_dogstatsd.enabled && var.dd_dogstatsd.socket_enabled) ? [
+    (var.apm.enabled && var.apm.socket_enabled) || (var.dogstatsd.enabled && var.dogstatsd.socket_enabled) ? [
       {
         containerPath = local.datadog_socket_path
         sourceVolume  = "dd-sockets"
@@ -96,17 +92,11 @@ locals {
   )
 
   # Build docker labels map
-  datadog_docker_labels = merge(
-    var.dd_env != null ? {
-      "com.datadoghq.tags.env" = var.dd_env
-    } : {},
-    var.dd_service != null ? {
-      "com.datadoghq.tags.service" = var.dd_service
-    } : {},
-    var.dd_version != null ? {
-      "com.datadoghq.tags.version" = var.dd_version
-    } : {}
-  )
+  datadog_docker_labels = {
+    "com.datadoghq.tags.env"     = module.label.stage,
+    "com.datadoghq.tags.service" = length(trimspace(var.service_name)) > 0 ? trimspace(var.service_name) : "unknown",
+    "com.datadoghq.tags.version" = length(trimspace(var.service_version)) > 0 ? trimspace(var.service_version) : "unknown"
+  }
 }
 
 output "container_environment_variables" {
@@ -133,7 +123,7 @@ output "task_definition_volumes" {
   description = "List of volume definitions to add to the ECS task definition. Includes dd-sockets volume (if APM/DogStatsD sockets enabled) and cws-instrumentation-volume (if CWS is enabled)."
   value = concat(
     # Socket volume (only if APM or DogStatsD sockets are enabled)
-    (var.dd_apm.enabled && var.dd_apm.socket_enabled) || (var.dd_dogstatsd.enabled && var.dd_dogstatsd.socket_enabled) ? [
+    (var.apm.enabled && var.apm.socket_enabled) || (var.dogstatsd.enabled && var.dogstatsd.socket_enabled) ? [
       {
         name = "dd-sockets"
       }

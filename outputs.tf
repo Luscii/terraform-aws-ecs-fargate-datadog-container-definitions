@@ -38,7 +38,7 @@ output "datadog_containers_json" {
 
 output "task_execution_role_policy_json" {
   description = "IAM policy document JSON for the task execution role. Include this in your task execution role to grant access to Datadog secrets. Returns empty string if no secret is configured."
-  value       = local.has_dd_api_key ? data.aws_iam_policy_document.task_execution_role.json : ""
+  value       = local.has_api_key ? data.aws_iam_policy_document.task_execution_role.json : ""
   sensitive   = true
 }
 
@@ -54,4 +54,12 @@ output "task_role_policy_json" {
 output "context" {
   description = "Context output from CloudPosse label module for passing to nested modules"
   value       = module.label.context
+}
+
+################################################################################
+# Pull Cache Prefixes
+################################################################################
+output "pull_cache_prefixes" {
+  description = "Set of unique ECR pull cache prefixes used by Datadog containers. Use this to set up ECR pull through cache rules and IAM policies in the calling module."
+  value       = local.pull_cache_prefixes
 }
