@@ -100,11 +100,12 @@ In **this module**:
 
 When adding or updating variables from the upstream module:
 
-1. **Remove `dd_` prefix** for general configuration:
+1. **Remove `dd_` prefix** for general configuration, and restructure image settings:
    - `dd_api_key` → `api_key`
    - `dd_site` → `site`
-   - `dd_registry` → `registry`
-   - `dd_image_version` → `image_version`
+   - `dd_registry` + `dd_image_version` → `agent_image` (object with `repository` and `pull_cache_prefix`) + `agent_image_tag` (string)
+     - Note: The `agent_image.repository` field replaces `dd_registry` (without the registry URL prefix)
+     - The `agent_image_tag` field replaces `dd_image_version`
 
 2. **Use `agent_` prefix** for agent-specific configuration:
    - `dd_cpu` → `agent_cpu`

@@ -93,7 +93,7 @@ variable "ecr_registry_url" {
 }
 
 variable "agent_image" {
-  description = "Datadog Agent container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/agent'). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'agent_image_tag'."
+  description = "Datadog Agent container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/agent'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (Docker Hub images are automatically resolved with 'docker.io/' prefix by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'agent_image_tag'."
   type = object({
     repository        = optional(string, "datadog/agent")
     pull_cache_prefix = optional(string, "")
@@ -249,7 +249,7 @@ variable "apm" {
 }
 
 variable "log_router_image" {
-  description = "Fluent Bit log router container image configuration. The repository should be the path without registry or tag (e.g., 'aws-observability/aws-for-fluent-bit'). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'ecr-public') when using ECR pull cache. The tag is specified separately in 'log_router_image_tag'."
+  description = "Fluent Bit log router container image configuration. The repository should be the path without registry or tag (e.g., 'aws-observability/aws-for-fluent-bit'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (images are automatically resolved by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'ecr-public') when using ECR pull cache. The tag is specified separately in 'log_router_image_tag'."
   type = object({
     repository        = optional(string, "aws-observability/aws-for-fluent-bit")
     pull_cache_prefix = optional(string, "")
@@ -360,7 +360,7 @@ variable "log_collection" {
 }
 
 variable "cws_image" {
-  description = "Datadog Cloud Workload Security (CWS) instrumentation container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/cws-instrumentation'). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'cws_image_tag'."
+  description = "Datadog Cloud Workload Security (CWS) instrumentation container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/cws-instrumentation'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (Docker Hub images are automatically resolved with 'docker.io/' prefix by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'cws_image_tag'."
   type = object({
     repository        = optional(string, "datadog/cws-instrumentation")
     pull_cache_prefix = optional(string, "")
