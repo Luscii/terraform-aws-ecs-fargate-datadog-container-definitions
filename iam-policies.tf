@@ -7,12 +7,38 @@
 # IAM Policy Documents
 ################################################################################
 
-# Task Execution Role Policy - Access to Datadog API Key Secret
-# Uses the IAM policy document from the service-secrets module
+data "aws_iam_policy_document" "execution_pull_cache" {
+  count = length(local.pull_cache_rule_arns) > 0 ? 1 : 0
+  statement {
+    sid    = "DD_ECRPullThroughCacheAccess"
+    effect = "Allow"
+    actions = [
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+      "ecr:BatchCheckLayerAvailability"
+    ]
+    resources = [for arn in values(local.pull_cache_rule_arns) : "${arn}/*"]
+  }
+  statement {
+    sid    = "DD_ECRPullThroughCacheCredentials"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+    resources = concat(local.pull_cache_credential_arns)
+  }
+}
+
+# Task Execution Role Policy
+#  - Access to Datadog API Key Secret
+#    Uses the IAM policy document from the service-secrets module
+#  - Access to ECR Pull Through Cache if any pull cache prefixes are configured
+#    Includes permissions to read from the pull cache repositories and access the associated Secrets Manager secrets
 data "aws_iam_policy_document" "task_execution_role" {
   # Include the policy from service-secrets module if it exists
   source_policy_documents = compact([
-    module.service_secrets.iam_policy_document
+    module.service_secrets.iam_policy_document,
+    length(data.aws_iam_policy_document.execution_pull_cache) > 0 ? data.aws_iam_policy_document.execution_pull_cache[0].json : null
   ])
 }
 
