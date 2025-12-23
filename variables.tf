@@ -421,10 +421,6 @@ variable "log_collection" {
     condition     = try(var.log_collection.enabled == false, false) || try(var.log_collection.enabled == true && var.log_collection.fluentbit_config != null, false)
     error_message = "The Datadog Log Collection fluentbit configuration must be defined."
   }
-  validation {
-    condition     = try(var.log_collection.enabled == false, false) || try(var.log_collection.enabled == true && var.log_collection.fluentbit_config.log_driver_configuration != null, false)
-    error_message = "The Datadog Log Collection log driver configuration must be defined."
-  }
 
 }
 
