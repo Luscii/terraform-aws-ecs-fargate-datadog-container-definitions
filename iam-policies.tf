@@ -10,7 +10,7 @@
 data "aws_iam_policy_document" "execution_pull_cache" {
   count = length(local.pull_cache_rule_arns) > 0 ? 1 : 0
   statement {
-    sid    = "DD_ECRPullThroughCacheAccess"
+    sid    = "DatadogECRPullThroughCacheAccess"
     effect = "Allow"
     actions = [
       "ecr:GetDownloadUrlForLayer",
@@ -20,7 +20,7 @@ data "aws_iam_policy_document" "execution_pull_cache" {
     resources = [for arn in values(local.pull_cache_rule_arns) : "${arn}/*"]
   }
   statement {
-    sid    = "DD_ECRPullThroughCacheCredentials"
+    sid    = "DatadogECRPullThroughCacheCredentials"
     effect = "Allow"
     actions = [
       "secretsmanager:GetSecretValue"
