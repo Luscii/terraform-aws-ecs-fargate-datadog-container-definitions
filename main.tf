@@ -43,8 +43,7 @@ data "aws_ecs_cluster" "this" {
 
 locals {
 
-  is_linux               = var.runtime_platform == null || try(var.runtime_platform.operating_system_family == null, true) || try(var.runtime_platform.operating_system_family == "LINUX", true)
-  is_fluentbit_supported = var.log_collection.enabled && local.is_linux
+  is_linux = var.runtime_platform == null || try(var.runtime_platform.operating_system_family == null, true) || try(var.runtime_platform.operating_system_family == "LINUX", true)
 
   # Extract DD_API_KEY ARN from service_secrets outputs for Fluent Bit configuration
   # The container_definition output is a list of {name, valueFrom} objects
@@ -72,35 +71,6 @@ locals {
     "${local.pull_cache_rule_urls[var.cws_image.pull_cache_prefix]}${var.cws_image.repository}:${var.cws_image_tag}" :
     "${var.cws_image.repository}:${var.cws_image_tag}"
   )
-
-  # Datadog Firelens log configuration
-  dd_firelens_log_configuration = local.is_fluentbit_supported ? merge(
-    {
-      logDriver = "awsfirelens"
-      options = merge(
-        {
-          provider    = "ecs"
-          Name        = "datadog"
-          Host        = var.log_collection.fluentbit_config.log_driver_configuration.host_endpoint
-          retry_limit = "2"
-        },
-        var.log_collection.fluentbit_config.log_driver_configuration.tls == true ? { TLS = "on" } : {},
-        var.log_collection.fluentbit_config.log_driver_configuration.service_name != null ? { dd_service = var.log_collection.fluentbit_config.log_driver_configuration.service_name } : {},
-        var.log_collection.fluentbit_config.log_driver_configuration.source_name != null ? { dd_source = var.log_collection.fluentbit_config.log_driver_configuration.source_name } : {},
-        var.log_collection.fluentbit_config.log_driver_configuration.message_key != null ? { dd_message_key = var.log_collection.fluentbit_config.log_driver_configuration.message_key } : {},
-        var.log_collection.fluentbit_config.log_driver_configuration.compress != null ? { compress = var.log_collection.fluentbit_config.log_driver_configuration.compress } : {},
-        var.agent_tags != null ? { dd_tags = var.agent_tags } : {}
-      )
-    },
-    local.dd_api_key_secret_arn != null ? {
-      secretOptions = [
-        {
-          name      = "apikey"
-          valueFrom = local.dd_api_key_secret_arn
-        }
-      ]
-    } : {}
-  ) : null
 
   # Application container modifications
   is_apm_socket_mount = var.apm.enabled && var.apm.socket_enabled && local.is_linux
@@ -149,13 +119,6 @@ locals {
   # Note: Dependency variables for application containers are provided via
   # integration-outputs.tf (container_depends_on output) for users to add to their
   # own containers. This module does not modify application containers directly.
-
-  log_router_dependency = try(var.log_collection.fluentbit_config.is_log_router_dependency_enabled, false) && try(var.log_collection.fluentbit_config.log_router_health_check.command != null, false) && local.dd_firelens_log_configuration != null ? [
-    {
-      containerName = "datadog-log-router"
-      condition     = "HEALTHY"
-    }
-  ] : []
 
   # Datadog Agent container environment variables
   base_env = [
@@ -300,48 +263,6 @@ locals {
       )
     ]
   )
-
-  dd_log_environment = var.log_collection.fluentbit_config.environment != null ? var.log_collection.fluentbit_config.environment : []
-
-  # Datadog log router container definition
-  dd_log_container = local.is_fluentbit_supported ? [
-    merge(
-      {
-        name      = "datadog-log-router"
-        image     = local.log_router_image_url
-        essential = var.log_collection.fluentbit_config.is_log_router_essential
-        firelensConfiguration = {
-          type = "fluentbit"
-          options = merge(
-            {
-              enable-ecs-log-metadata = "true"
-            },
-            try(var.log_collection.fluentbit_config.firelens_options.config_file_type != null, false) ? { config-file-type = var.log_collection.fluentbit_config.firelens_options.config_file_type } : {},
-            try(var.log_collection.fluentbit_config.firelens_options.config_file_value != null, false) ? { config-file-value = var.log_collection.fluentbit_config.firelens_options.config_file_value } : {}
-          )
-        }
-        cpu              = var.log_collection.fluentbit_config.cpu
-        memory_limit_mib = var.log_collection.fluentbit_config.memory_limit_mib
-        user             = "0"
-        mountPoints      = var.log_collection.fluentbit_config.mountPoints
-        environment      = local.dd_log_environment
-        dockerLabels     = var.agent_docker_labels
-        portMappings     = []
-        systemControls   = []
-        volumesFrom      = []
-        dependsOn        = var.log_collection.fluentbit_config.dependsOn
-      },
-      var.log_collection.fluentbit_config.log_router_health_check.command == null ? {} : {
-        healthCheck = {
-          command     = var.log_collection.fluentbit_config.log_router_health_check.command
-          interval    = var.log_collection.fluentbit_config.log_router_health_check.interval
-          timeout     = var.log_collection.fluentbit_config.log_router_health_check.timeout
-          retries     = var.log_collection.fluentbit_config.log_router_health_check.retries
-          startPeriod = var.log_collection.fluentbit_config.log_router_health_check.start_period
-        }
-      }
-    )
-  ] : []
 
   # Datadog CWS tracer definition
   dd_cws_container = local.is_cws_supported ? [
