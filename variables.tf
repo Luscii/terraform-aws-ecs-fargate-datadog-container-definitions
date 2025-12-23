@@ -243,6 +243,18 @@ variable "site" {
   description = "Datadog Site"
   type        = string
   default     = "datadoghq.com"
+
+  validation {
+    condition = contains([
+      "datadoghq.com",
+      "us3.datadoghq.com",
+      "us5.datadoghq.com",
+      "datadoghq.eu",
+      "ddog-gov.com",
+      "ap1.datadoghq.com"
+    ], var.site)
+    error_message = "Site must be one of: `datadoghq.com` (US1), `us3.datadoghq.com` (US3), `us5.datadoghq.com` (US5), `datadoghq.eu` (EU1), `ddog-gov.com` (US1-FED), `ap1.datadoghq.com` (AP1)"
+  }
 }
 
 variable "agent_environment" {
