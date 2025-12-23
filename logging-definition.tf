@@ -10,6 +10,12 @@
 locals {
   is_fluentbit_supported = var.log_collection.enabled && local.is_linux
 
+  # Calculate log intake host endpoint based on site if not explicitly provided
+  log_intake_host = try(
+    var.log_collection.fluentbit_config.log_driver_configuration.host_endpoint,
+    "http-intake.logs.${var.site}"
+  )
+
   # Datadog Firelens log configuration
   dd_firelens_log_configuration = local.is_fluentbit_supported ? merge(
     {
@@ -18,7 +24,7 @@ locals {
         {
           provider    = "ecs"
           Name        = "datadog"
-          Host        = var.log_collection.fluentbit_config.log_driver_configuration.host_endpoint
+          Host        = local.log_intake_host
           retry_limit = "2"
         },
         var.log_collection.fluentbit_config.log_driver_configuration.tls == true ? { TLS = "on" } : {},

@@ -384,16 +384,14 @@ variable "log_collection" {
         config_file_value = optional(string)
       }))
       log_driver_configuration = optional(object({
-        host_endpoint = optional(string, "http-intake.logs.datadoghq.com")
+        host_endpoint = optional(string)
         tls           = optional(bool)
         compress      = optional(string)
         service_name  = optional(string)
         source_name   = optional(string)
         message_key   = optional(string)
         }),
-        {
-          host_endpoint = "http-intake.logs.datadoghq.com"
-        }
+        {}
       )
       mountPoints = optional(list(object({
         sourceVolume : string,
@@ -405,22 +403,14 @@ variable "log_collection" {
         condition : string
       })), [])
       }),
-      {
-        fluentbit_config = {
-          log_driver_configuration = {
-            host_endpoint = "http-intake.logs.datadoghq.com"
-          }
-        }
-      }
+      {}
     )
   })
   default = {
     enabled = false
     fluentbit_config = {
-      is_log_router_essential = false
-      log_driver_configuration = {
-        host_endpoint = "http-intake.logs.datadoghq.com"
-      }
+      is_log_router_essential  = false
+      log_driver_configuration = {}
     }
   }
   validation {
@@ -435,10 +425,7 @@ variable "log_collection" {
     condition     = try(var.log_collection.enabled == false, false) || try(var.log_collection.enabled == true && var.log_collection.fluentbit_config.log_driver_configuration != null, false)
     error_message = "The Datadog Log Collection log driver configuration must be defined."
   }
-  validation {
-    condition     = try(var.log_collection.enabled == false, false) || try(var.log_collection.enabled == true && var.log_collection.fluentbit_config.log_driver_configuration.host_endpoint != null, false)
-    error_message = "The Datadog Log Collection log driver configuration host endpoint must be defined."
-  }
+
 }
 
 variable "cws_image" {
