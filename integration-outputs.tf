@@ -20,19 +20,19 @@ locals {
   datadog_depends_on = concat(
     [
       {
-        containerName = "datadog-agent"
+        containerName = local.container_name_agent
         condition     = "HEALTHY"
       }
     ],
     local.log_router_enabled ? [
       {
-        containerName = "log_router"
+        containerName = local.container_name_log_router
         condition     = "START"
       }
     ] : [],
     local.cws_enabled ? [
       {
-        containerName = "cws-instrumentation-init"
+        containerName = local.container_name_cws_init
         condition     = "SUCCESS"
       }
     ] : []

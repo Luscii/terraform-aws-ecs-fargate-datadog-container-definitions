@@ -45,6 +45,13 @@ locals {
 
   is_linux = var.runtime_platform == null || try(var.runtime_platform.operating_system_family == null, true) || try(var.runtime_platform.operating_system_family == "LINUX", true)
 
+  # Centralized container name constants
+  # These names are used consistently across all container definitions and dependencies
+  container_name_agent      = "datadog-agent"
+  container_name_agent_init = "init-volume"
+  container_name_log_router = "datadog-log-router"
+  container_name_cws_init   = "cws-instrumentation-init"
+
   # Extract DD_API_KEY ARN from service_secrets outputs for Fluent Bit configuration
   # The container_definition output is a list of {name, valueFrom} objects
   dd_api_key_secret_arn = local.has_api_key ? one([for secret in module.service_secrets.container_definition : secret.valueFrom if secret.name == "DD_API_KEY"]) : null
