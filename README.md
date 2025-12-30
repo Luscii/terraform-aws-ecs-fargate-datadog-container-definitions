@@ -146,6 +146,85 @@ locals {
     }
   ]
 }
+```
+
+### Container Image Configuration
+
+The module supports flexible container image configuration for all Datadog containers, with support for ECR pull-through cache to avoid Docker Hub rate limits.
+
+#### Default Configuration (Amazon ECR Public)
+
+By default, the Fluent Bit log router uses Amazon ECR Public (no authentication required, no rate limits):
+
+```hcl
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  # ... other configuration ...
+
+  log_collection = {
+    enabled = true
+    fluentbit_config = {
+      # Default log_router_image:
+      #   repository: public.ecr.aws/aws-observability/aws-for-fluent-bit
+      #   tag: stable
+      log_driver_configuration = {
+        service_name = "my-service"
+      }
+    }
+  }
+}
+```
+
+#### Using Docker Hub
+
+To use Docker Hub instead (subject to rate limits):
+
+```hcl
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  # ... other configuration ...
+
+  log_router_image = {
+    repository        = "amazon/aws-for-fluent-bit"
+    pull_cache_prefix = ""  # Empty = direct pull from Docker Hub
+  }
+  log_router_image_tag = "stable"
+}
+```
+
+#### Using ECR Pull-Through Cache
+
+To avoid rate limits and improve reliability, use ECR pull-through cache:
+
+```hcl
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  # ... other configuration ...
+
+  # Datadog Agent via Docker Hub cache
+  agent_image = {
+    repository        = "datadog/agent"
+    pull_cache_prefix = "docker-hub"  # ECR pull-through cache rule prefix
+  }
+  agent_image_tag = "7"
+
+  # Fluent Bit via ECR Public cache
+  log_router_image = {
+    repository        = "aws-observability/aws-for-fluent-bit"
+    pull_cache_prefix = "ecr-public"  # ECR pull-through cache rule prefix
+  }
+  log_router_image_tag = "stable"
+}
+```
+
+**Note:** When using `pull_cache_prefix`, ensure you have created the corresponding ECR pull-through cache rules in your AWS account:
+- `docker-hub` → `registry-1.docker.io`
+- `ecr-public` → `public.ecr.aws`
+
+```
 
 resource "aws_ecs_task_definition" "this" {
   family                   = "my-app"
@@ -258,7 +337,7 @@ The module's `task_role_policy_json` output includes:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.26.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.27.0 |
 
 ### Modules
 
@@ -307,7 +386,7 @@ The module's `task_role_policy_json` output includes:
 | <a name="input_ecs_task_definition_arn"></a> [ecs\_task\_definition\_arn](#input\_ecs\_task\_definition\_arn) | ARN of the ECS task definition. When provided, task-specific IAM permissions will be scoped to this task definition. Use with ecs\_cluster\_arn for granular permissions. | `string` | `null` | no |
 | <a name="input_kms_key_id"></a> [kms\_key\_id](#input\_kms\_key\_id) | KMS Key identifier to encrypt Datadog API key secret if a new secret is created. Can be in any of the formats: Key ID, Key ARN, Alias Name, Alias ARN | `string` | `null` | no |
 | <a name="input_log_collection"></a> [log\_collection](#input\_log\_collection) | Configuration for Datadog Log Collection | <pre>object({<br/>    enabled = optional(bool, false)<br/>    fluentbit_config = optional(object({<br/>      cpu                              = optional(number)<br/>      memory_limit_mib                 = optional(number)<br/>      is_log_router_essential          = optional(bool, false)<br/>      is_log_router_dependency_enabled = optional(bool, false)<br/>      environment = optional(list(object({<br/>        name  = string<br/>        value = string<br/>      })), [])<br/>      log_router_health_check = optional(object({<br/>        command      = optional(list(string))<br/>        interval     = optional(number)<br/>        retries      = optional(number)<br/>        start_period = optional(number)<br/>        timeout      = optional(number)<br/>        }),<br/>        {<br/>          command      = ["CMD-SHELL", "exit 0"]<br/>          interval     = 5<br/>          retries      = 3<br/>          start_period = 15<br/>          timeout      = 5<br/>        }<br/>      )<br/>      firelens_options = optional(object({<br/>        config_file_type  = optional(string)<br/>        config_file_value = optional(string)<br/>      }))<br/>      log_driver_configuration = optional(object({<br/>        host_endpoint = optional(string)<br/>        tls           = optional(bool)<br/>        compress      = optional(string)<br/>        service_name  = optional(string)<br/>        source_name   = optional(string)<br/>        message_key   = optional(string)<br/>        }),<br/>        {}<br/>      )<br/>      mountPoints = optional(list(object({<br/>        sourceVolume : string,<br/>        containerPath : string,<br/>        readOnly : bool<br/>      })), [])<br/>      dependsOn = optional(list(object({<br/>        containerName : string,<br/>        condition : string<br/>      })), [])<br/>      }),<br/>      {}<br/>    )<br/>  })</pre> | <pre>{<br/>  "enabled": false,<br/>  "fluentbit_config": {<br/>    "is_log_router_essential": false,<br/>    "log_driver_configuration": {}<br/>  }<br/>}</pre> | no |
-| <a name="input_log_router_image"></a> [log\_router\_image](#input\_log\_router\_image) | Fluent Bit log router container image configuration. The repository should be the path without registry or tag (e.g., 'aws-observability/aws-for-fluent-bit'). When pull\_cache\_prefix is empty (default), images are pulled directly from their source registries (images are automatically resolved by the container runtime). Set pull\_cache\_prefix to your ECR pull-through cache rule prefix (e.g., 'ecr-public') when using ECR pull cache. The tag is specified separately in 'log\_router\_image\_tag'. | <pre>object({<br/>    repository        = optional(string, "aws-observability/aws-for-fluent-bit")<br/>    pull_cache_prefix = optional(string, "")<br/>  })</pre> | `{}` | no |
+| <a name="input_log_router_image"></a> [log\_router\_image](#input\_log\_router\_image) | Fluent Bit log router container image configuration. The repository should be the full image path including registry when pull\_cache\_prefix is empty, or just the repository path when using ECR pull-through cache. Default uses Amazon ECR Public. Examples: 'public.ecr.aws/aws-observability/aws-for-fluent-bit' (ECR Public, no cache), 'amazon/aws-for-fluent-bit' (Docker Hub, no cache), 'aws-observability/aws-for-fluent-bit' (with pull\_cache\_prefix='ecr-public'). The tag is specified separately in 'log\_router\_image\_tag'. | <pre>object({<br/>    repository        = optional(string, "public.ecr.aws/aws-observability/aws-for-fluent-bit")<br/>    pull_cache_prefix = optional(string, "")<br/>  })</pre> | `{}` | no |
 | <a name="input_log_router_image_tag"></a> [log\_router\_image\_tag](#input\_log\_router\_image\_tag) | Fluent Bit log router container image tag | `string` | `"stable"` | no |
 | <a name="input_parameters"></a> [parameters](#input\_parameters) | Map of parameters for the Datadog containers, each key will be the name. When the value is set, a parameter is created. Otherwise the arn of existing parameter is added to the outputs. | <pre>map(<br/>    object({<br/>      data_type      = optional(string, "text")<br/>      description    = optional(string)<br/>      sensitive      = optional(bool, false)<br/>      tier           = optional(string, "Advanced")<br/>      value          = optional(string)<br/>      value_from_arn = optional(string)<br/>    })<br/>  )</pre> | `{}` | no |
 | <a name="input_runtime_platform"></a> [runtime\_platform](#input\_runtime\_platform) | Configuration for `runtime_platform` that containers in your task may use | <pre>object({<br/>    cpu_architecture        = optional(string, "X86_64")<br/>    operating_system_family = optional(string, "LINUX")<br/>  })</pre> | <pre>{<br/>  "cpu_architecture": "X86_64",<br/>  "operating_system_family": "LINUX"<br/>}</pre> | no |
