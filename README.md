@@ -30,10 +30,11 @@ locals {
       essential = true
 
       # Automatic Datadog integration using module outputs
-      environment  = module.datadog_containers.container_environment_variables
-      mountPoints  = module.datadog_containers.container_mount_points
-      dependsOn    = module.datadog_containers.container_depends_on
-      dockerLabels = module.datadog_containers.container_docker_labels
+      environment    = module.datadog_containers.container_environment_variables
+      mountPoints    = module.datadog_containers.container_mount_points
+      dependsOn      = module.datadog_containers.container_depends_on
+      dockerLabels   = module.datadog_containers.container_docker_labels
+      logConfiguration = module.datadog_containers.container_log_configuration
     }
   ]
 }
@@ -403,6 +404,7 @@ The module's `task_role_policy_json` output includes:
 | <a name="output_container_depends_on"></a> [container\_depends\_on](#output\_container\_depends\_on) | List of container dependencies to add to application containers. Ensures Datadog agent (and log router/CWS if enabled) are ready before application starts. |
 | <a name="output_container_docker_labels"></a> [container\_docker\_labels](#output\_container\_docker\_labels) | Map of Docker labels to add to application containers for Unified Service Tagging. Includes env, service, and version labels. |
 | <a name="output_container_environment_variables"></a> [container\_environment\_variables](#output\_container\_environment\_variables) | List of environment variables to add to application containers for Datadog integration. Includes DD\_TRACE\_AGENT\_URL, DD\_DOGSTATSD\_URL (if socket-based), and Unified Service Tagging variables. |
+| <a name="output_container_log_configuration"></a> [container\_log\_configuration](#output\_container\_log\_configuration) | Log configuration object to add to application containers for Datadog log collection via FireLens. Returns null if log collection is disabled. Use this in your container definitions' logConfiguration field to send logs to Datadog. |
 | <a name="output_container_mount_points"></a> [container\_mount\_points](#output\_container\_mount\_points) | List of mount points to add to application containers for Datadog integration. Includes Datadog socket volume and CWS instrumentation volume (if enabled). |
 | <a name="output_context"></a> [context](#output\_context) | Context output from CloudPosse label module for passing to nested modules |
 | <a name="output_datadog_agent_container"></a> [datadog\_agent\_container](#output\_datadog\_agent\_container) | The Datadog Agent container definition as a list of objects (includes init-volume container if read-only root filesystem is enabled) |
