@@ -119,6 +119,11 @@ output "container_docker_labels" {
   value       = local.datadog_docker_labels
 }
 
+output "container_log_configuration" {
+  description = "Log configuration object to add to application containers for Datadog log collection via FireLens. Returns null if log collection is disabled. Use this in your container definitions' logConfiguration field to send logs to Datadog."
+  value       = local.dd_firelens_log_configuration
+}
+
 output "task_definition_volumes" {
   description = "List of volume definitions to add to the ECS task definition. Includes dd-sockets volume (if APM/DogStatsD sockets enabled) and cws-instrumentation-volume (if CWS is enabled)."
   value = concat(

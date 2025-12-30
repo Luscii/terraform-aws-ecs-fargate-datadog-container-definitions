@@ -41,10 +41,11 @@ locals {
       ]
 
       # Use module outputs for Datadog integration
-      environment  = module.datadog_container_definitions.container_environment_variables
-      mountPoints  = module.datadog_container_definitions.container_mount_points
-      dependsOn    = module.datadog_container_definitions.container_depends_on
-      dockerLabels = module.datadog_container_definitions.container_docker_labels
+      environment      = module.datadog_container_definitions.container_environment_variables
+      mountPoints      = module.datadog_container_definitions.container_mount_points
+      dependsOn        = module.datadog_container_definitions.container_depends_on
+      dockerLabels     = module.datadog_container_definitions.container_docker_labels
+      logConfiguration = module.datadog_container_definitions.container_log_configuration
     }
   ]
 }
