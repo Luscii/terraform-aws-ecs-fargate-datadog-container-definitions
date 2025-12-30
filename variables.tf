@@ -343,9 +343,9 @@ variable "apm" {
 }
 
 variable "log_router_image" {
-  description = "Fluent Bit log router container image configuration. The repository should be the path without registry or tag (e.g., 'aws-observability/aws-for-fluent-bit'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (images are automatically resolved by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'ecr-public') when using ECR pull cache. The tag is specified separately in 'log_router_image_tag'."
+  description = "Fluent Bit log router container image configuration. The repository should be the full image path including registry when pull_cache_prefix is empty, or just the repository path when using ECR pull-through cache. Default uses Amazon ECR Public. Examples: 'public.ecr.aws/aws-observability/aws-for-fluent-bit' (ECR Public, no cache), 'amazon/aws-for-fluent-bit' (Docker Hub, no cache), 'aws-observability/aws-for-fluent-bit' (with pull_cache_prefix='ecr-public'). The tag is specified separately in 'log_router_image_tag'."
   type = object({
-    repository        = optional(string, "aws-observability/aws-for-fluent-bit")
+    repository        = optional(string, "public.ecr.aws/aws-observability/aws-for-fluent-bit")
     pull_cache_prefix = optional(string, "")
   })
   default = {}
