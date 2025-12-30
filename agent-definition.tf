@@ -91,7 +91,7 @@ locals {
     var.agent_readonly_root_filesystem ? [
       {
         condition     = "SUCCESS"
-        containerName = "init-volume"
+        containerName = local.container_name_agent_init
       }
     ] : [],
     try(var.log_collection.fluentbit_config.is_log_router_dependency_enabled, false) && local.dd_firelens_log_configuration != null ? local.log_router_dependency : [],
@@ -103,7 +103,7 @@ locals {
       {
         cpu                    = 0
         memory                 = 128
-        name                   = "init-volume"
+        name                   = local.container_name_agent_init
         image                  = local.agent_image_url
         essential              = false
         readOnlyRootFilesystem = true
@@ -120,7 +120,7 @@ locals {
     [
       merge(
         {
-          name         = "datadog-agent"
+          name         = local.container_name_agent
           image        = local.agent_image_url
           essential    = var.agent_essential
           environment  = local.dd_agent_env

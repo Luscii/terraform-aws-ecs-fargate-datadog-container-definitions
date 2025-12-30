@@ -32,7 +32,7 @@ locals {
   # Datadog CWS tracer definition
   dd_cws_container = local.is_cws_supported ? [
     {
-      name             = "cws-instrumentation-init"
+      name             = local.container_name_cws_init
       image            = local.cws_image_url
       cpu              = var.cws.cpu
       memory_limit_mib = var.cws.memory_limit_mib

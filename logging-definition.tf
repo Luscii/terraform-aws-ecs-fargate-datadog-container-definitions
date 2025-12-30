@@ -47,7 +47,7 @@ locals {
 
   log_router_dependency = try(var.log_collection.fluentbit_config.is_log_router_dependency_enabled, false) && try(var.log_collection.fluentbit_config.log_router_health_check.command != null, false) && local.dd_firelens_log_configuration != null ? [
     {
-      containerName = "datadog-log-router"
+      containerName = local.container_name_log_router
       condition     = "HEALTHY"
     }
   ] : []
@@ -58,7 +58,7 @@ locals {
   dd_log_container = local.is_fluentbit_supported ? [
     merge(
       {
-        name      = "datadog-log-router"
+        name      = local.container_name_log_router
         image     = local.log_router_image_url
         essential = var.log_collection.fluentbit_config.is_log_router_essential
         firelensConfiguration = {
