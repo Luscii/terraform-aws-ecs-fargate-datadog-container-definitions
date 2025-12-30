@@ -81,6 +81,7 @@ locals {
         systemControls   = []
         volumesFrom      = []
         dependsOn        = var.log_collection.fluentbit_config.dependsOn
+        logConfiguration = var.log_collection.fluentbit_config.log_router_log_configuration
       },
       var.log_collection.fluentbit_config.log_router_health_check.command == null ? {} : {
         healthCheck = {

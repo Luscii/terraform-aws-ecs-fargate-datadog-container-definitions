@@ -405,6 +405,19 @@ variable "log_collection" {
         }),
         {}
       )
+      log_router_log_configuration = optional(object({
+        logDriver = optional(string, "awslogs")
+        options = optional(map(string), {})
+        secretOptions = optional(list(object({
+          name      = string
+          valueFrom = string
+        })), [])
+        }),
+        {
+          logDriver = "awslogs"
+          options   = {}
+        }
+      )
       mountPoints = optional(list(object({
         sourceVolume : string,
         containerPath : string,
