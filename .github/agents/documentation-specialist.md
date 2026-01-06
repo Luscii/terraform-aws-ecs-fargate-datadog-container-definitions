@@ -94,7 +94,7 @@ You are a documentation specialist focused exclusively on creating and maintaini
 ```
 
 ## Configuration
-
+```
 <!-- BEGIN_TF_DOCS -->
 <!-- END_TF_DOCS -->
 ```
