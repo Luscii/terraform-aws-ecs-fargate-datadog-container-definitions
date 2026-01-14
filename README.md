@@ -260,10 +260,25 @@ The module supports advanced log processing with custom FluentBit parsers and fi
 ### Overview
 
 FluentBit log processing pipeline:
-```
-Container Logs → FluentBit → Custom Parsers → Custom Filters → Datadog
-                     ↓              ↓                ↓
-                 S3 Config    Extract Data    Transform/Enrich
+
+```mermaid
+graph LR
+    A[Container Logs] --> B[FluentBit]
+    B --> C[Custom Parsers]
+    C --> D[Custom Filters]
+    D --> E[Datadog]
+    B -.-> F[S3 Config]
+    C -.-> G[Extract Data]
+    D -.-> H[Transform/Enrich]
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e6
+    style C fill:#e8f5e9
+    style D fill:#f3e5f5
+    style E fill:#fce4ec
+    style F fill:#f5f5f5
+    style G fill:#f5f5f5
+    style H fill:#f5f5f5
 ```
 
 ### Basic Log Collection
