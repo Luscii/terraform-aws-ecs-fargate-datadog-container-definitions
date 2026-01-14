@@ -73,3 +73,17 @@ output "pull_cache_rule_arns" {
   description = "Map of ECR pull cache rule ARNs keyed by pull cache prefix. Use this to configure IAM policies if needed."
   value       = local.pull_cache_rule_arns
 }
+
+################################################################################
+# Custom Logging Configuration Outputs
+################################################################################
+
+output "parsers_config_s3_key" {
+  description = "S3 object key for the FluentBit parsers configuration file. Returns null if no custom parsers are configured."
+  value       = local.enable_custom_log_config && local.has_custom_parsers ? local.parsers_config_key : null
+}
+
+output "filters_config_s3_key" {
+  description = "S3 object key for the FluentBit filters configuration file. Returns null if no filters are configured."
+  value       = local.enable_custom_log_config && local.has_filters ? local.filters_config_key : null
+}

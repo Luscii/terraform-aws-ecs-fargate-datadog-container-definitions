@@ -253,6 +253,358 @@ resource "aws_ecs_task_definition" "this" {
 }
 ```
 
+## Log Collection with Custom FluentBit Configuration
+
+The module supports advanced log processing with custom FluentBit parsers and filters, enabling you to extract, transform, and enrich logs before sending them to Datadog.
+
+### Overview
+
+FluentBit log processing pipeline:
+```
+Container Logs → FluentBit → Custom Parsers → Custom Filters → Datadog
+                     ↓              ↓                ↓
+                 S3 Config    Extract Data    Transform/Enrich
+```
+
+### Basic Log Collection
+
+Enable log collection with default configuration:
+
+```hcl
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  # ... other configuration ...
+
+  log_collection = {
+    enabled = true
+    fluentbit_config = {
+      cpu                     = 128
+      memory_limit_mib        = 256
+      is_log_router_essential = true
+      log_driver_configuration = {
+        service_name = "my-service"
+        source_name  = "my-app"
+      }
+    }
+  }
+}
+```
+
+### Custom Parsers and Filters
+
+For advanced log processing, define custom parsers and filters that will be automatically uploaded to S3 and loaded by FluentBit:
+
+```hcl
+resource "aws_s3_bucket" "fluentbit_config" {
+  bucket = "my-fluentbit-config"
+}
+
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  # ... other configuration ...
+
+  log_collection = {
+    enabled = true
+    fluentbit_config = {
+      cpu                     = 128
+      memory_limit_mib        = 256
+      is_log_router_essential = true
+    }
+  }
+
+  # S3 bucket for custom configuration files
+  s3_config_bucket_name = aws_s3_bucket.fluentbit_config.id
+
+  # Configuration file format (yaml for v3.x+, conf for v2.x)
+  log_config_file_format = "yaml"
+
+  # Custom parsers for extracting structured data
+  log_config_parsers = [
+    {
+      name        = "json_parser"
+      format      = "json"
+      time_key    = "timestamp"
+      time_format = "%Y-%m-%dT%H:%M:%S.%L"
+
+      # Apply parser to Docker logs
+      filter = {
+        match        = "docker.*"
+        key_name     = "log"
+        reserve_data = true
+      }
+    },
+    {
+      name   = "custom_format"
+      format = "regex"
+      regex  = "^(?<time>[^ ]+) (?<level>[^ ]+) (?<message>.*)$"
+
+      filter = {
+        match        = "app.*"
+        key_name     = "log"
+        reserve_data = true
+      }
+    }
+  ]
+
+  # Custom filters for transforming and enriching logs
+  log_config_filters = [
+    # Add environment metadata
+    {
+      name = "modify"
+      add_fields = {
+        environment = "production"
+        service     = "my-service"
+      }
+    },
+    # Exclude health check logs
+    {
+      name    = "grep"
+      match   = "docker.*"
+      exclude = "health"
+    },
+    # Nest Kubernetes metadata
+    {
+      name          = "nest"
+      operation     = "nest"
+      wildcard      = ["kubernetes_*"]
+      nest_under    = "kubernetes"
+      remove_prefix = "kubernetes_"
+    }
+  ]
+}
+```
+
+### Configuration File Format
+
+The module supports both YAML (FluentBit v3.x+) and classic `.conf` (FluentBit v2.x) formats:
+
+- **YAML format** (default, requires FluentBit v3.2.0+):
+  ```hcl
+  log_config_file_format = "yaml"
+  log_router_image_tag   = "3.2.0"  # Default
+  ```
+
+- **Classic .conf format** (for FluentBit v2.x):
+  ```hcl
+  log_config_file_format = "conf"
+  log_router_image_tag   = "2.34.2"
+  ```
+
+### FluentBit Init Process
+
+When custom parsers or filters are configured, the module automatically:
+
+1. **Generates configuration files** in YAML or .conf format
+2. **Uploads to S3** with namespaced keys: `{module-path-id}/parsers.yaml` and `{module-path-id}/filters.yaml`
+3. **Uses init-tagged FluentBit image** (e.g., `init-3.2.0`) for multi-config support
+4. **Sets environment variables** for S3 config download:
+   - `aws_fluent_bit_init_s3_1` → parsers config S3 ARN
+   - `aws_fluent_bit_init_s3_2` → filters config S3 ARN
+
+The FluentBit container downloads and loads these configurations on startup. See [AWS for Fluent Bit init process documentation](https://github.com/aws/aws-for-fluent-bit/blob/mainline/troubleshooting/debugging.md#using-init-tag-for-debug) for more details.
+
+### Parser Options
+
+Supported parser formats and their common options:
+
+**JSON Parser:**
+```hcl
+{
+  name        = "json_parser"
+  format      = "json"
+  time_key    = "timestamp"        # Field containing timestamp
+  time_format = "%Y-%m-%dT%H:%M:%S.%L"
+  time_keep   = true               # Keep original time field
+}
+```
+
+**Regex Parser:**
+```hcl
+{
+  name   = "custom_format"
+  format = "regex"
+  regex  = "^(?<field1>[^ ]+) (?<field2>[^ ]+)$"  # Capture groups become fields
+}
+```
+
+**LTSV Parser** (tab-separated values):
+```hcl
+{
+  name   = "ltsv_parser"
+  format = "ltsv"
+}
+```
+
+**Logfmt Parser** (key=value pairs):
+```hcl
+{
+  name   = "logfmt_parser"
+  format = "logfmt"
+}
+```
+
+See [FluentBit Parsers Documentation](https://docs.fluentbit.io/manual/data-pipeline/parsers/configuring-parser) for all available options.
+
+### Filter Options
+
+Supported filter types:
+
+**Parser Filter** (apply parsers to logs):
+```hcl
+{
+  name         = "parser"
+  parser       = "json_parser"     # Parser to apply
+  match        = "docker.*"        # Tag pattern
+  key_name     = "log"             # Field to parse
+  reserve_data = true              # Keep other fields
+}
+```
+
+**Grep Filter** (include/exclude logs):
+```hcl
+{
+  name    = "grep"
+  match   = "docker.*"
+  regex   = "error"                # Include logs matching pattern
+  exclude = "health"               # Exclude logs matching pattern
+}
+```
+
+**Modify Filter** (add/rename/remove fields):
+```hcl
+{
+  name = "modify"
+  add_fields = {
+    environment = "production"
+    region      = "us-east-1"
+  }
+  rename_fields = {
+    old_field = "new_field"
+  }
+  remove_fields = ["sensitive_field"]
+}
+```
+
+**Nest Filter** (restructure data):
+```hcl
+{
+  name          = "nest"
+  operation     = "nest"           # or "lift"
+  wildcard      = ["prefix_*"]
+  nest_under    = "nested_object"
+  remove_prefix = "prefix_"
+}
+```
+
+See [FluentBit Filters Documentation](https://docs.fluentbit.io/manual/pipeline/filters) for all available filter types and options.
+
+### Log Driver Configuration
+
+Configure the FluentBit output to Datadog:
+
+```hcl
+log_collection = {
+  enabled = true
+  fluentbit_config = {
+    log_driver_configuration = {
+      host_endpoint = "http-intake.logs.datadoghq.eu"  # Override Datadog endpoint
+      service_name  = "my-service"                     # Service name in Datadog
+      source_name   = "my-app"                         # Source name in Datadog
+      tls           = true                             # Use TLS (default: true)
+      compress      = "gzip"                           # Compression (gzip/zlib)
+      message_key   = "log"                            # JSON key for log message
+    }
+  }
+}
+```
+
+Available options:
+- `host_endpoint`: Datadog logs endpoint (defaults based on `site` variable)
+- `service_name`: Service name tag in Datadog
+- `source_name`: Source tag in Datadog
+- `tls`: Enable TLS (default: true)
+- `compress`: Compression algorithm (gzip, zlib)
+- `message_key`: JSON field containing the log message
+
+### Advanced Configuration
+
+Additional FluentBit container options:
+
+```hcl
+log_collection = {
+  enabled = true
+  fluentbit_config = {
+    cpu                              = 256
+    memory_limit_mib                 = 512
+    is_log_router_essential          = true
+    is_log_router_dependency_enabled = true
+
+    # Custom environment variables
+    environment = [
+      { name = "FLB_LOG_LEVEL", value = "debug" }
+    ]
+
+    # Health check configuration
+    log_router_health_check = {
+      command      = ["CMD-SHELL", "exit 0"]
+      interval     = 5
+      retries      = 3
+      start_period = 15
+      timeout      = 5
+    }
+
+    # Custom mount points
+    mountPoints = [
+      {
+        sourceVolume  = "config"
+        containerPath = "/fluent-bit/config"
+        readOnly      = true
+      }
+    ]
+
+    # Container dependencies
+    dependsOn = [
+      {
+        containerName = "init"
+        condition     = "SUCCESS"
+      }
+    ]
+  }
+}
+```
+
+### IAM Permissions
+
+The module automatically includes S3 `GetObject` permissions in the `task_role_policy_json` output when custom parsers or filters are configured. Ensure your task role includes these permissions:
+
+```hcl
+data "aws_iam_policy_document" "task_combined" {
+  source_policy_documents = [
+    module.datadog_containers.task_role_policy_json,
+    # Your additional policies...
+  ]
+}
+```
+
+The generated IAM policy includes:
+- `s3:GetObject` permission for the config bucket
+- `s3:GetBucketLocation` for bucket access
+- Scoped to the specific S3 bucket containing FluentBit configurations
+
+### Complete Example
+
+For a complete working example with custom parsers and filters, see [examples/custom-logging](./examples/custom-logging).
+
+### References
+
+- [FluentBit Parsers Documentation](https://docs.fluentbit.io/manual/data-pipeline/parsers/configuring-parser)
+- [FluentBit Filters Documentation](https://docs.fluentbit.io/manual/pipeline/filters)
+- [FluentBit Parser Filter](https://docs.fluentbit.io/manual/pipeline/filters/parser)
+- [AWS for Fluent Bit](https://github.com/aws/aws-for-fluent-bit)
+- [AWS for Fluent Bit Init Process](https://github.com/aws/aws-for-fluent-bit/blob/mainline/troubleshooting/debugging.md#using-init-tag-for-debug)
+
 ## Required IAM Permissions
 
 This module provides IAM policy documents as outputs that you can use in your IAM roles.
@@ -421,6 +773,8 @@ The module's `task_role_policy_json` output includes:
 | <a name="output_datadog_containers_json"></a> [datadog\_containers\_json](#output\_datadog\_containers\_json) | All Datadog-related container definitions as a JSON-encoded string. Use this if you need a pre-encoded JSON string. |
 | <a name="output_datadog_cws_container"></a> [datadog\_cws\_container](#output\_datadog\_cws\_container) | The Datadog Cloud Workload Security instrumentation container definition as a list of objects (empty list if CWS is disabled) |
 | <a name="output_datadog_log_router_container"></a> [datadog\_log\_router\_container](#output\_datadog\_log\_router\_container) | The Datadog Log Router (Fluent Bit) container definition as a list of objects (empty list if log collection is disabled) |
+| <a name="output_filters_config_s3_key"></a> [filters\_config\_s3\_key](#output\_filters\_config\_s3\_key) | S3 object key for the FluentBit filters configuration file. Returns null if no filters are configured. |
+| <a name="output_parsers_config_s3_key"></a> [parsers\_config\_s3\_key](#output\_parsers\_config\_s3\_key) | S3 object key for the FluentBit parsers configuration file. Returns null if no custom parsers are configured. |
 | <a name="output_pull_cache_prefixes"></a> [pull\_cache\_prefixes](#output\_pull\_cache\_prefixes) | Set of unique ECR pull cache prefixes used by Datadog containers. Use this to set up ECR pull through cache rules and IAM policies in the calling module. |
 | <a name="output_pull_cache_rule_arns"></a> [pull\_cache\_rule\_arns](#output\_pull\_cache\_rule\_arns) | Map of ECR pull cache rule ARNs keyed by pull cache prefix. Use this to configure IAM policies if needed. |
 | <a name="output_pull_cache_rule_urls"></a> [pull\_cache\_rule\_urls](#output\_pull\_cache\_rule\_urls) | Map of ECR pull cache rule URLs keyed by pull cache prefix. Use this to configure container image URLs in Datadog container definitions. |
