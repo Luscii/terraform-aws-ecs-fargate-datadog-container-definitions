@@ -352,14 +352,14 @@ variable "log_router_image" {
 }
 
 variable "log_router_image_tag" {
-  description = "Fluent Bit log router container image tag"
+  description = "Fluent Bit log router container image tag. Version 3.x+ supports YAML configuration files, version 2.x only supports classic .conf format. Use specific version tags (e.g., '3.2.0', '2.34.2') instead of mutable tags like 'stable' or '3' for production deployments."
   type        = string
-  default     = "stable"
+  default     = "3.2.0"
   nullable    = false
 
   validation {
     condition     = var.log_router_image_tag != "latest"
-    error_message = "Image tag must not be 'latest'. Use a specific version tag instead (e.g., 'stable', '2.31.0')."
+    error_message = "Image tag must not be 'latest'. Use a specific version tag instead (e.g., '3.2.0' for YAML support, '2.34.2' for classic config only)."
   }
 }
 
@@ -407,7 +407,7 @@ variable "log_collection" {
       )
       log_router_log_configuration = optional(object({
         logDriver = optional(string, "awslogs")
-        options = optional(map(string), {})
+        options   = optional(map(string), {})
         secretOptions = optional(list(object({
           name      = string
           valueFrom = string
@@ -447,6 +447,79 @@ variable "log_collection" {
     error_message = "The Datadog Log Collection fluentbit configuration must be defined."
   }
 
+}
+
+variable "s3_config_bucket_name" {
+  description = "Datadog S3 Config Bucket Name for log collection configuration"
+  type        = string
+  default     = null
+}
+
+variable "log_config_file_format" {
+  description = "Datadog log collection configuration file format when using S3 config bucket. Valid values are 'yaml' or 'conf'. Note: YAML format requires Fluent Bit version 3.x or higher (controlled by log_router_image_tag). Version 2.x only supports 'conf' format."
+  type        = string
+  default     = "yaml"
+
+  validation {
+    condition     = contains(["yaml", "conf"], lower(var.log_config_file_format))
+    error_message = "log_config_file_format must be either 'yaml' or 'conf'. Note: YAML requires Fluent Bit v3.x+, use 'conf' for v2.x."
+  }
+}
+
+variable "log_config_parsers" {
+  description = "Custom parser definitions for Fluent Bit log processing. Each parser can extract and transform log data using formats like json, regex, ltsv, or logfmt. The optional filter section controls when and how the parser is applied to log records. Required for Fluent Bit v3.x YAML configurations. See: https://docs.fluentbit.io/manual/data-pipeline/parsers/configuring-parser and https://docs.fluentbit.io/manual/pipeline/filters/parser"
+  type = list(object({
+    name   = string
+    format = string
+    # JSON parser options
+    time_key    = optional(string)
+    time_format = optional(string)
+    time_keep   = optional(bool)
+    # Regex parser options
+    regex = optional(string)
+    # LTSV parser options (tab-separated values)
+    # Logfmt parser options
+    # Decoder options
+    decode_field    = optional(string)
+    decode_field_as = optional(string)
+    # Type casting
+    types = optional(string)
+    # Additional options
+    skip_empty_values = optional(bool)
+    # Filter configuration - controls when and how this parser is applied
+    filter = optional(object({
+      match        = optional(string)      # Tag pattern to match (e.g., 'docker.*', 'app.logs')
+      key_name     = optional(string)      # Field name to parse (e.g., 'log', 'message')
+      reserve_data = optional(bool, false) # Preserve all other fields in the record
+      preserve_key = optional(bool, false) # Keep the original key field after parsing
+      unescape_key = optional(bool, false) # Unescape the key field before parsing
+    }))
+  }))
+  default = []
+
+  validation {
+    condition = alltrue([
+      for parser in var.log_config_parsers :
+      contains(["json", "regex", "ltsv", "logfmt"], parser.format)
+    ])
+    error_message = "Parser format must be one of: json, regex, ltsv, logfmt"
+  }
+
+  validation {
+    condition = alltrue([
+      for parser in var.log_config_parsers :
+      parser.format != "regex" || parser.regex != null
+    ])
+    error_message = "Regex parser requires 'regex' field to be set"
+  }
+
+  validation {
+    condition = alltrue([
+      for parser in var.log_config_parsers :
+      parser.filter == null || parser.filter.key_name != null
+    ])
+    error_message = "When filter is specified, 'key_name' is required to identify which field to parse"
+  }
 }
 
 variable "cws_image" {

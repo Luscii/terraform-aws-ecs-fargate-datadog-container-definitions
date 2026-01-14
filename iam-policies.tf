@@ -42,8 +42,33 @@ data "aws_iam_policy_document" "task_execution_role" {
   ])
 }
 
+# Task Role Policy - S3 Config Bucket Access for Datadog Log Collection
+
+data "aws_iam_policy_document" "s3_custom_config_access" {
+  count = local.enable_custom_log_config ? 1 : 0
+
+  statement {
+    sid    = "DatadogS3ConfigBucketReadAccess"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:GetBucketLocation"
+    ]
+    resources = concat(
+      data.aws_s3_bucket.config[*].arn,
+      aws_s3_object.parsers_config[*].arn,
+      aws_s3_object.filters_config[*].arn
+    )
+  }
+}
+
 # Task Role Policy - ECS Metadata Access for Datadog Agent
 data "aws_iam_policy_document" "task_role" {
+  # Include S3 config access policy if defined
+  source_policy_documents = concat(
+    data.aws_iam_policy_document.s3_custom_config_access[*].json
+  )
+
   # Statement for listing and describing ECS resources
   statement {
     sid    = "DatadogECSMetadataAccess"
