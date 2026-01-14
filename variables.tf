@@ -522,6 +522,59 @@ variable "log_config_parsers" {
   }
 }
 
+variable "log_config_filters" {
+  description = "Custom filter definitions for Fluent Bit log processing. Filters can modify, enrich, or drop log records. Common filter types include grep (include/exclude), modify (add/rename/remove fields), nest (restructure data), and kubernetes (enrich with K8s metadata). See: https://docs.fluentbit.io/manual/pipeline/filters"
+  type = list(object({
+    name  = string
+    match = optional(string) # Tag pattern to match (e.g., 'docker.*', 'app.logs')
+    # Parser filter options
+    parser       = optional(string)      # Parser name to apply
+    key_name     = optional(string)      # Field name to parse (required for parser filter)
+    reserve_data = optional(bool, false) # Preserve all other fields in the record
+    preserve_key = optional(bool, false) # Keep the original key field after parsing
+    unescape_key = optional(bool, false) # Unescape the key field before parsing
+    # Grep filter options
+    regex   = optional(string) # Regex pattern to match
+    exclude = optional(string) # Regex pattern to exclude
+    # Modify filter options
+    add_fields    = optional(map(string))  # Fields to add
+    rename_fields = optional(map(string))  # Fields to rename (old_name = new_name)
+    remove_fields = optional(list(string)) # Fields to remove
+    # Nest filter options
+    operation     = optional(string)       # nest or lift
+    wildcard      = optional(list(string)) # Wildcard patterns
+    nest_under    = optional(string)       # Target field for nesting
+    nested_under  = optional(string)       # Source field for lifting
+    remove_prefix = optional(string)       # Prefix to remove from keys
+    add_prefix    = optional(string)       # Prefix to add to keys
+  }))
+  default = []
+
+  validation {
+    condition = alltrue([
+      for filter in var.log_config_filters :
+      filter.name == "parser" ? filter.key_name != null : true
+    ])
+    error_message = "Parser filter requires 'key_name' to identify which field to parse"
+  }
+
+  validation {
+    condition = alltrue([
+      for filter in var.log_config_filters :
+      filter.name == "parser" ? filter.parser != null : true
+    ])
+    error_message = "Parser filter requires 'parser' field to specify which parser to use"
+  }
+
+  validation {
+    condition = alltrue([
+      for filter in var.log_config_filters :
+      filter.name == "nest" ? filter.operation != null : true
+    ])
+    error_message = "Nest filter requires 'operation' field (nest or lift)"
+  }
+}
+
 variable "cws_image" {
   description = "Datadog Cloud Workload Security (CWS) instrumentation container image configuration. The repository should be the path without registry or tag (e.g., 'datadog/cws-instrumentation'). When pull_cache_prefix is empty (default), images are pulled directly from their source registries (Docker Hub images are automatically resolved with 'docker.io/' prefix by the container runtime). Set pull_cache_prefix to your ECR pull-through cache rule prefix (e.g., 'docker-hub') when using ECR pull cache. The tag is specified separately in 'cws_image_tag'."
   type = object({
