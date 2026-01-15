@@ -63,7 +63,7 @@ data "aws_iam_policy_document" "s3_custom_config_access" {
 
   # KMS decrypt permissions if bucket uses KMS encryption
   dynamic "statement" {
-    for_each = var.s3_config_bucket != null && var.s3_config_bucket.kms_key_id != null ? [1] : []
+    for_each = length(data.aws_kms_key.config_bucket) > 0 ? [1] : []
     content {
       sid    = "DatadogS3ConfigBucketKMSDecrypt"
       effect = "Allow"
@@ -71,7 +71,7 @@ data "aws_iam_policy_document" "s3_custom_config_access" {
         "kms:Decrypt",
         "kms:DescribeKey"
       ]
-      resources = [var.s3_config_bucket.kms_key_id]
+      resources = [data.aws_kms_key.config_bucket[0].arn]
     }
   }
 }

@@ -136,6 +136,12 @@ data "aws_s3_bucket" "config" {
   bucket = var.s3_config_bucket.name
 }
 
+data "aws_kms_key" "config_bucket" {
+  count = local.enable_custom_log_config && var.s3_config_bucket.kms_key_id != null ? 1 : 0
+
+  key_id = var.s3_config_bucket.kms_key_id
+}
+
 # Upload parsers configuration to S3
 resource "aws_s3_object" "parsers_config" {
   count = local.enable_custom_log_config && local.has_custom_parsers ? 1 : 0
