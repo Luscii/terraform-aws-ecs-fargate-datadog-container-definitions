@@ -18,7 +18,7 @@ output "datadog_containers" {
   value       = module.datadog_container_definitions.datadog_containers
 }
 
-output "config_bucket_name" {
+output "config_bucket" {
   description = "Name of the S3 bucket containing FluentBit configuration"
   value       = aws_s3_bucket.config.id
 }

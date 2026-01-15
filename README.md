@@ -330,7 +330,11 @@ module "datadog_containers" {
   }
 
   # S3 bucket for custom configuration files
-  s3_config_bucket_name = aws_s3_bucket.fluentbit_config.id
+  s3_config_bucket = {
+    name = aws_s3_bucket.fluentbit_config.id
+    # Optional: KMS key for bucket encryption
+    # kms_key_id = aws_kms_key.fluentbit_config.arn
+  }
 
   # Configuration file format (yaml for v3.x+, conf for v2.x)
   log_config_file_format = "yaml"
@@ -766,7 +770,7 @@ The module's `task_role_policy_json` output includes:
 | <a name="input_log_router_image_tag"></a> [log\_router\_image\_tag](#input\_log\_router\_image\_tag) | Fluent Bit log router container image tag. Version 3.x+ supports YAML configuration files, version 2.x only supports classic .conf format. Use specific version tags (e.g., '3.2.0', '2.34.2') instead of mutable tags like 'stable' or '3' for production deployments. | `string` | `"3.2.0"` | no |
 | <a name="input_parameters"></a> [parameters](#input\_parameters) | Map of parameters for the Datadog containers, each key will be the name. When the value is set, a parameter is created. Otherwise the arn of existing parameter is added to the outputs. | <pre>map(<br/>    object({<br/>      data_type      = optional(string, "text")<br/>      description    = optional(string)<br/>      sensitive      = optional(bool, false)<br/>      tier           = optional(string, "Advanced")<br/>      value          = optional(string)<br/>      value_from_arn = optional(string)<br/>    })<br/>  )</pre> | `{}` | no |
 | <a name="input_runtime_platform"></a> [runtime\_platform](#input\_runtime\_platform) | Configuration for `runtime_platform` that containers in your task may use | <pre>object({<br/>    cpu_architecture        = optional(string, "X86_64")<br/>    operating_system_family = optional(string, "LINUX")<br/>  })</pre> | <pre>{<br/>  "cpu_architecture": "X86_64",<br/>  "operating_system_family": "LINUX"<br/>}</pre> | no |
-| <a name="input_s3_config_bucket_name"></a> [s3\_config\_bucket\_name](#input\_s3\_config\_bucket\_name) | Datadog S3 Config Bucket Name for log collection configuration | `string` | `null` | no |
+| <a name="input_s3_config_bucket"></a> [s3\_config\_bucket](#input\_s3\_config\_bucket) | S3 bucket configuration for storing FluentBit custom configuration files. The bucket is used to host custom parser and filter configurations that are loaded by the FluentBit init process. If the bucket uses KMS encryption, provide the KMS key ID/ARN for decrypt permissions. | <pre>object({<br/>    name       = string<br/>    kms_key_id = optional(string)<br/>  })</pre> | `null` | no |
 | <a name="input_secrets"></a> [secrets](#input\_secrets) | Map of secrets for the Datadog containers, each key will be the name. When the value is set, a secret is created. Otherwise the arn of existing secret is added to the outputs. | <pre>map(object({<br/>    value          = optional(string)<br/>    description    = optional(string)<br/>    value_from_arn = optional(string)<br/>  }))</pre> | `{}` | no |
 | <a name="input_service_name"></a> [service\_name](#input\_service\_name) | The service name for Datadog Unified Service Tagging (UST). Sets the `DD_SERVICE` environment variable and `com.datadoghq.tags.service` Docker label. Should identify the service across all environments (e.g., 'web-api', 'payment-service'). | `string` | n/a | yes |
 | <a name="input_service_version"></a> [service\_version](#input\_service\_version) | The version identifier for Datadog Unified Service Tagging (UST). Sets the `DD_VERSION` environment variable and `com.datadoghq.tags.version` Docker label. Should identify the application version (e.g., 'v1.2.3', git commit SHA). | `string` | n/a | yes |

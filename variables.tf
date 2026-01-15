@@ -449,10 +449,13 @@ variable "log_collection" {
 
 }
 
-variable "s3_config_bucket_name" {
-  description = "Datadog S3 Config Bucket Name for log collection configuration"
-  type        = string
-  default     = null
+variable "s3_config_bucket" {
+  description = "S3 bucket configuration for storing FluentBit custom configuration files. The bucket is used to host custom parser and filter configurations that are loaded by the FluentBit init process. If the bucket uses KMS encryption, provide the KMS key ID/ARN for decrypt permissions."
+  type = object({
+    name       = string
+    kms_key_id = optional(string)
+  })
+  default = null
 }
 
 variable "log_config_file_format" {

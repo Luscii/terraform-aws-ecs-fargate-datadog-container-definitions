@@ -22,8 +22,8 @@ check "validate_api_key" {
 
 check "validate_custom_log_parsers_s3_bucket" {
   assert {
-    condition     = (length(var.log_config_parsers) == 0 && length(var.log_config_filters) == 0) || var.s3_config_bucket_name != null
-    error_message = "When log_config_parsers or log_config_filters is configured, s3_config_bucket_name must be set to store the custom FluentBit configuration files."
+    condition     = (length(var.log_config_parsers) == 0 && length(var.log_config_filters) == 0) || var.s3_config_bucket != null
+    error_message = "When log_config_parsers or log_config_filters is configured, s3_config_bucket must be set to store the custom FluentBit configuration files."
   }
 }
 

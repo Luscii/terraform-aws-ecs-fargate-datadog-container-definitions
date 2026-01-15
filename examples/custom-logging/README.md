@@ -88,7 +88,9 @@ Before using this example, you must have:
    service_name               = "my-service"
    environment                = "dev"
    app_image                  = "my-app:latest"
-   config_bucket_name         = "my-unique-fluentbit-config"
+   config_bucket = {
+     name = "my-unique-fluentbit-config"
+   }
    ```
 
 2. Run Terraform:
@@ -189,11 +191,11 @@ After applying, you can inspect the generated configuration:
 ```bash
 # View parsers configuration
 terraform output -raw parsers_config_s3_key
-aws s3 cp s3://$(terraform output -raw config_bucket_name)/$(terraform output -raw parsers_config_s3_key) -
+aws s3 cp s3://$(terraform output -raw config_bucket)/$(terraform output -raw parsers_config_s3_key) -
 
 # View filters configuration
 terraform output -raw filters_config_s3_key
-aws s3 cp s3://$(terraform output -raw config_bucket_name)/$(terraform output -raw filters_config_s3_key) -
+aws s3 cp s3://$(terraform output -raw config_bucket)/$(terraform output -raw filters_config_s3_key) -
 ```
 
 ## References

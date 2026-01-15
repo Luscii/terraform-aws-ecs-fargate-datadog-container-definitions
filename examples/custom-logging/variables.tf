@@ -55,8 +55,13 @@ variable "task_role_arn" {
   type        = string
 }
 
-variable "config_bucket_name" {
-  description = "Name for the S3 bucket to store custom FluentBit configuration files"
-  type        = string
-  default     = "my-fluentbit-config"
+variable "config_bucket" {
+  description = "Configuration for the S3 bucket to store custom FluentBit configuration files"
+  type = object({
+    name       = string
+    kms_key_id = optional(string)
+  })
+  default = {
+    name = "my-fluentbit-config"
+  }
 }

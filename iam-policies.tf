@@ -60,6 +60,20 @@ data "aws_iam_policy_document" "s3_custom_config_access" {
       aws_s3_object.filters_config[*].arn
     )
   }
+
+  # KMS decrypt permissions if bucket uses KMS encryption
+  dynamic "statement" {
+    for_each = var.s3_config_bucket != null && var.s3_config_bucket.kms_key_id != null ? [1] : []
+    content {
+      sid    = "DatadogS3ConfigBucketKMSDecrypt"
+      effect = "Allow"
+      actions = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      resources = [var.s3_config_bucket.kms_key_id]
+    }
+  }
 }
 
 # Task Role Policy - ECS Metadata Access for Datadog Agent

@@ -7,7 +7,7 @@ provider "aws" {
 ################################################################################
 
 resource "aws_s3_bucket" "config" {
-  bucket = var.config_bucket_name
+  bucket = var.config_bucket.name
 }
 
 resource "aws_s3_bucket_versioning" "config" {
@@ -57,7 +57,9 @@ module "datadog_container_definitions" {
   }
 
   # S3 bucket for custom FluentBit configuration files
-  s3_config_bucket_name = aws_s3_bucket.config.id
+  s3_config_bucket = {
+    name = aws_s3_bucket.config.id
+  }
 
   # Configuration file format (yaml for v3.x, conf for v2.x)
   log_config_file_format = "yaml"

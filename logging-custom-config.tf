@@ -1,7 +1,7 @@
 locals {
   has_custom_parsers       = length(var.log_config_parsers) > 0
   has_custom_filters       = length(var.log_config_filters) > 0
-  enable_custom_log_config = var.log_collection.enabled && var.s3_config_bucket_name != null && (local.has_custom_parsers || local.has_custom_filters)
+  enable_custom_log_config = var.log_collection.enabled && var.s3_config_bucket != null && (local.has_custom_parsers || local.has_custom_filters)
 
   # Combine parser filters with standalone filters
   all_filters = concat(
@@ -110,8 +110,8 @@ locals {
   filters_config_key = "${module.path.id}/filters.${var.log_config_file_format}"
 
   # S3 ARNs for init process environment variables
-  parsers_config_s3_arn = local.enable_custom_log_config && local.has_custom_parsers ? "arn:aws:s3:::${var.s3_config_bucket_name}/${local.parsers_config_key}" : null
-  filters_config_s3_arn = local.enable_custom_log_config && local.has_filters ? "arn:aws:s3:::${var.s3_config_bucket_name}/${local.filters_config_key}" : null
+  parsers_config_s3_arn = local.enable_custom_log_config && local.has_custom_parsers ? "arn:aws:s3:::${var.s3_config_bucket.name}/${local.parsers_config_key}" : null
+  filters_config_s3_arn = local.enable_custom_log_config && local.has_filters ? "arn:aws:s3:::${var.s3_config_bucket.name}/${local.filters_config_key}" : null
 
   # Environment variables for init process multi-config support
   custom_config_environment = local.enable_custom_log_config && local.has_custom_parsers ? concat(
@@ -133,7 +133,7 @@ locals {
 data "aws_s3_bucket" "config" {
   count = local.enable_custom_log_config ? 1 : 0
 
-  bucket = var.s3_config_bucket_name
+  bucket = var.s3_config_bucket.name
 }
 
 # Upload parsers configuration to S3
