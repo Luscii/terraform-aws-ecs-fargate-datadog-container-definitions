@@ -253,6 +253,377 @@ resource "aws_ecs_task_definition" "this" {
 }
 ```
 
+## Log Collection with Custom FluentBit Configuration
+
+The module supports advanced log processing with custom FluentBit parsers and filters, enabling you to extract, transform, and enrich logs before sending them to Datadog.
+
+### Overview
+
+FluentBit log processing pipeline:
+
+```mermaid
+graph LR
+    A[Container Logs] --> B[FluentBit]
+    B --> C[Custom Parsers]
+    C --> D[Custom Filters]
+    D --> E[Datadog]
+    B -.-> F[S3 Config]
+    C -.-> G[Extract Data]
+    D -.-> H[Transform/Enrich]
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e6
+    style C fill:#e8f5e9
+    style D fill:#f3e5f5
+    style E fill:#fce4ec
+    style F fill:#f5f5f5
+    style G fill:#f5f5f5
+    style H fill:#f5f5f5
+```
+
+### Basic Log Collection
+
+Enable log collection with default configuration:
+
+```hcl
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  # ... other configuration ...
+
+  log_collection = {
+    enabled = true
+    fluentbit_config = {
+      cpu                     = 128
+      memory_limit_mib        = 256
+      is_log_router_essential = true
+      log_driver_configuration = {
+        service_name = "my-service"
+        source_name  = "my-app"
+      }
+    }
+  }
+}
+```
+
+### Custom Parsers and Filters
+
+For advanced log processing, define custom parsers and filters that will be automatically uploaded to S3 and loaded by FluentBit:
+
+```hcl
+resource "aws_s3_bucket" "fluentbit_config" {
+  bucket = "my-fluentbit-config"
+}
+
+module "datadog_containers" {
+  source = "github.com/Luscii/terraform-aws-ecs-fargate-datadog-container-definitions"
+
+  # ... other configuration ...
+
+  log_collection = {
+    enabled = true
+    fluentbit_config = {
+      cpu                     = 128
+      memory_limit_mib        = 256
+      is_log_router_essential = true
+    }
+  }
+
+  # S3 bucket for custom configuration files
+  s3_config_bucket = {
+    name = aws_s3_bucket.fluentbit_config.id
+    # Optional: KMS key for bucket encryption
+    # kms_key_id = aws_kms_key.fluentbit_config.arn
+  }
+
+  # Configuration file format (yaml for v3.x+, conf for v2.x)
+  log_config_file_format = "yaml"
+
+  # Custom parsers for extracting structured data
+  log_config_parsers = [
+    {
+      name        = "json_parser"
+      format      = "json"
+      time_key    = "timestamp"
+      time_format = "%Y-%m-%dT%H:%M:%S.%L"
+
+      # Apply parser to Docker logs
+      filter = {
+        match        = "docker.*"
+        key_name     = "log"
+        reserve_data = true
+      }
+    },
+    {
+      name   = "custom_format"
+      format = "regex"
+      regex  = "^(?<time>[^ ]+) (?<level>[^ ]+) (?<message>.*)$"
+
+      filter = {
+        match        = "app.*"
+        key_name     = "log"
+        reserve_data = true
+      }
+    }
+  ]
+
+  # Custom filters for transforming and enriching logs
+  log_config_filters = [
+    # Add environment metadata
+    {
+      name = "modify"
+      add_fields = {
+        environment = "production"
+        service     = "my-service"
+      }
+    },
+    # Exclude health check logs
+    {
+      name    = "grep"
+      match   = "docker.*"
+      exclude = "health"
+    },
+    # Nest Kubernetes metadata
+    {
+      name          = "nest"
+      operation     = "nest"
+      wildcard      = ["kubernetes_*"]
+      nest_under    = "kubernetes"
+      remove_prefix = "kubernetes_"
+    }
+  ]
+}
+```
+
+### Configuration File Format
+
+The module supports both YAML (FluentBit v3.x+) and classic `.conf` (FluentBit v2.x) formats:
+
+- **YAML format** (default, requires FluentBit v3.2.0+):
+  ```hcl
+  log_config_file_format = "yaml"
+  log_router_image_tag   = "3.2.0"  # Default
+  ```
+
+- **Classic .conf format** (for FluentBit v2.x):
+  ```hcl
+  log_config_file_format = "conf"
+  log_router_image_tag   = "2.34.2"
+  ```
+
+### FluentBit Init Process
+
+When custom parsers or filters are configured, the module automatically:
+
+1. **Generates configuration files** in YAML or .conf format
+2. **Uploads to S3** with namespaced keys: `{module-path-id}/parsers.yaml` and `{module-path-id}/filters.yaml`
+3. **Uses init-tagged FluentBit image** (e.g., `init-3.2.0`) for multi-config support
+4. **Sets environment variables** for S3 config download:
+   - `aws_fluent_bit_init_s3_1` → parsers config S3 ARN
+   - `aws_fluent_bit_init_s3_2` → filters config S3 ARN
+
+The FluentBit container downloads and loads these configurations on startup. See [AWS for Fluent Bit init process documentation](https://github.com/aws/aws-for-fluent-bit/blob/mainline/troubleshooting/debugging.md#using-init-tag-for-debug) for more details.
+
+### Parser Options
+
+Supported parser formats and their common options:
+
+**JSON Parser:**
+```hcl
+{
+  name        = "json_parser"
+  format      = "json"
+  time_key    = "timestamp"        # Field containing timestamp
+  time_format = "%Y-%m-%dT%H:%M:%S.%L"
+  time_keep   = true               # Keep original time field
+}
+```
+
+**Regex Parser:**
+```hcl
+{
+  name   = "custom_format"
+  format = "regex"
+  regex  = "^(?<field1>[^ ]+) (?<field2>[^ ]+)$"  # Capture groups become fields
+}
+```
+
+**LTSV Parser** (tab-separated values):
+```hcl
+{
+  name   = "ltsv_parser"
+  format = "ltsv"
+}
+```
+
+**Logfmt Parser** (key=value pairs):
+```hcl
+{
+  name   = "logfmt_parser"
+  format = "logfmt"
+}
+```
+
+See [FluentBit Parsers Documentation](https://docs.fluentbit.io/manual/data-pipeline/parsers/configuring-parser) for all available options.
+
+### Filter Options
+
+Supported filter types:
+
+**Parser Filter** (apply parsers to logs):
+```hcl
+{
+  name         = "parser"
+  parser       = "json_parser"     # Parser to apply
+  match        = "docker.*"        # Tag pattern
+  key_name     = "log"             # Field to parse
+  reserve_data = true              # Keep other fields
+}
+```
+
+**Grep Filter** (include/exclude logs):
+```hcl
+{
+  name    = "grep"
+  match   = "docker.*"
+  regex   = "error"                # Include logs matching pattern
+  exclude = "health"               # Exclude logs matching pattern
+}
+```
+
+**Modify Filter** (add/rename/remove fields):
+```hcl
+{
+  name = "modify"
+  add_fields = {
+    environment = "production"
+    region      = "us-east-1"
+  }
+  rename_fields = {
+    old_field = "new_field"
+  }
+  remove_fields = ["sensitive_field"]
+}
+```
+
+**Nest Filter** (restructure data):
+```hcl
+{
+  name          = "nest"
+  operation     = "nest"           # or "lift"
+  wildcard      = ["prefix_*"]
+  nest_under    = "nested_object"
+  remove_prefix = "prefix_"
+}
+```
+
+See [FluentBit Filters Documentation](https://docs.fluentbit.io/manual/pipeline/filters) for all available filter types and options.
+
+### Log Driver Configuration
+
+Configure the FluentBit output to Datadog:
+
+```hcl
+log_collection = {
+  enabled = true
+  fluentbit_config = {
+    log_driver_configuration = {
+      host_endpoint = "http-intake.logs.datadoghq.eu"  # Override Datadog endpoint
+      service_name  = "my-service"                     # Service name in Datadog
+      source_name   = "my-app"                         # Source name in Datadog
+      tls           = true                             # Use TLS (default: true)
+      compress      = "gzip"                           # Compression (gzip/zlib)
+      message_key   = "log"                            # JSON key for log message
+    }
+  }
+}
+```
+
+Available options:
+- `host_endpoint`: Datadog logs endpoint (defaults based on `site` variable)
+- `service_name`: Service name tag in Datadog
+- `source_name`: Source tag in Datadog
+- `tls`: Enable TLS (default: true)
+- `compress`: Compression algorithm (gzip, zlib)
+- `message_key`: JSON field containing the log message
+
+### Advanced Configuration
+
+Additional FluentBit container options:
+
+```hcl
+log_collection = {
+  enabled = true
+  fluentbit_config = {
+    cpu                              = 256
+    memory_limit_mib                 = 512
+    is_log_router_essential          = true
+    is_log_router_dependency_enabled = true
+
+    # Custom environment variables
+    environment = [
+      { name = "FLB_LOG_LEVEL", value = "debug" }
+    ]
+
+    # Health check configuration
+    log_router_health_check = {
+      command      = ["CMD-SHELL", "exit 0"]
+      interval     = 5
+      retries      = 3
+      start_period = 15
+      timeout      = 5
+    }
+
+    # Custom mount points
+    mountPoints = [
+      {
+        sourceVolume  = "config"
+        containerPath = "/fluent-bit/config"
+        readOnly      = true
+      }
+    ]
+
+    # Container dependencies
+    dependsOn = [
+      {
+        containerName = "init"
+        condition     = "SUCCESS"
+      }
+    ]
+  }
+}
+```
+
+### IAM Permissions
+
+The module automatically includes S3 `GetObject` permissions in the `task_role_policy_json` output when custom parsers or filters are configured. Ensure your task role includes these permissions:
+
+```hcl
+data "aws_iam_policy_document" "task_combined" {
+  source_policy_documents = [
+    module.datadog_containers.task_role_policy_json,
+    # Your additional policies...
+  ]
+}
+```
+
+The generated IAM policy includes:
+- `s3:GetObject` permission for the config bucket
+- `s3:GetBucketLocation` for bucket access
+- Scoped to the specific S3 bucket containing FluentBit configurations
+
+### Complete Example
+
+For a complete working example with custom parsers and filters, see [examples/custom-logging](./examples/custom-logging).
+
+### References
+
+- [FluentBit Parsers Documentation](https://docs.fluentbit.io/manual/data-pipeline/parsers/configuring-parser)
+- [FluentBit Filters Documentation](https://docs.fluentbit.io/manual/pipeline/filters)
+- [FluentBit Parser Filter](https://docs.fluentbit.io/manual/pipeline/filters/parser)
+- [AWS for Fluent Bit](https://github.com/aws/aws-for-fluent-bit)
+- [AWS for Fluent Bit Init Process](https://github.com/aws/aws-for-fluent-bit/blob/mainline/troubleshooting/debugging.md#using-init-tag-for-debug)
+
 ## Required IAM Permissions
 
 This module provides IAM policy documents as outputs that you can use in your IAM roles.
@@ -338,26 +709,32 @@ The module's `task_role_policy_json` output includes:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.27.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.28.0 |
 
 ### Modules
 
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_label"></a> [label](#module\_label) | cloudposse/label/null | 0.25.0 |
+| <a name="module_path"></a> [path](#module\_path) | cloudposse/label/null | 0.25.0 |
 | <a name="module_service_secrets"></a> [service\_secrets](#module\_service\_secrets) | github.com/Luscii/terraform-aws-service-secrets | 1.2.1 |
 
 ### Resources
 
 | Name | Type |
 |------|------|
+| [aws_s3_object.filters_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object) | resource |
+| [aws_s3_object.parsers_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_ecr_pull_through_cache_rule.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ecr_pull_through_cache_rule) | data source |
 | [aws_ecs_cluster.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ecs_cluster) | data source |
 | [aws_iam_policy_document.execution_pull_cache](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.s3_custom_config_access](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.task_execution_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.task_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_kms_key.config_bucket](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_key) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
+| [aws_s3_bucket.config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/s3_bucket) | data source |
 | [aws_secretsmanager_secret.pull_through_cache_credentials](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_secret) | data source |
 
 ### Inputs
@@ -386,11 +763,15 @@ The module's `task_role_policy_json` output includes:
 | <a name="input_ecs_cluster_name"></a> [ecs\_cluster\_name](#input\_ecs\_cluster\_name) | ARN of the ECS cluster. When provided, IAM policies will be scoped to this cluster. If not provided, policies will use wildcard resources. | `string` | `null` | no |
 | <a name="input_ecs_task_definition_arn"></a> [ecs\_task\_definition\_arn](#input\_ecs\_task\_definition\_arn) | ARN of the ECS task definition. When provided, task-specific IAM permissions will be scoped to this task definition. Use with ecs\_cluster\_arn for granular permissions. | `string` | `null` | no |
 | <a name="input_kms_key_id"></a> [kms\_key\_id](#input\_kms\_key\_id) | KMS Key identifier to encrypt Datadog API key secret if a new secret is created. Can be in any of the formats: Key ID, Key ARN, Alias Name, Alias ARN | `string` | `null` | no |
-| <a name="input_log_collection"></a> [log\_collection](#input\_log\_collection) | Configuration for Datadog Log Collection | <pre>object({<br/>    enabled = optional(bool, false)<br/>    fluentbit_config = optional(object({<br/>      cpu                              = optional(number)<br/>      memory_limit_mib                 = optional(number)<br/>      is_log_router_essential          = optional(bool, false)<br/>      is_log_router_dependency_enabled = optional(bool, false)<br/>      environment = optional(list(object({<br/>        name  = string<br/>        value = string<br/>      })), [])<br/>      log_router_health_check = optional(object({<br/>        command      = optional(list(string))<br/>        interval     = optional(number)<br/>        retries      = optional(number)<br/>        start_period = optional(number)<br/>        timeout      = optional(number)<br/>        }),<br/>        {<br/>          command      = ["CMD-SHELL", "exit 0"]<br/>          interval     = 5<br/>          retries      = 3<br/>          start_period = 15<br/>          timeout      = 5<br/>        }<br/>      )<br/>      firelens_options = optional(object({<br/>        config_file_type  = optional(string)<br/>        config_file_value = optional(string)<br/>      }))<br/>      log_driver_configuration = optional(object({<br/>        host_endpoint = optional(string)<br/>        tls           = optional(bool)<br/>        compress      = optional(string)<br/>        service_name  = optional(string)<br/>        source_name   = optional(string)<br/>        message_key   = optional(string)<br/>        }),<br/>        {}<br/>      )<br/>      mountPoints = optional(list(object({<br/>        sourceVolume : string,<br/>        containerPath : string,<br/>        readOnly : bool<br/>      })), [])<br/>      dependsOn = optional(list(object({<br/>        containerName : string,<br/>        condition : string<br/>      })), [])<br/>      }),<br/>      {}<br/>    )<br/>  })</pre> | <pre>{<br/>  "enabled": false,<br/>  "fluentbit_config": {<br/>    "is_log_router_essential": false,<br/>    "log_driver_configuration": {}<br/>  }<br/>}</pre> | no |
+| <a name="input_log_collection"></a> [log\_collection](#input\_log\_collection) | Configuration for Datadog Log Collection | <pre>object({<br/>    enabled = optional(bool, false)<br/>    fluentbit_config = optional(object({<br/>      cpu                              = optional(number)<br/>      memory_limit_mib                 = optional(number)<br/>      is_log_router_essential          = optional(bool, false)<br/>      is_log_router_dependency_enabled = optional(bool, false)<br/>      environment = optional(list(object({<br/>        name  = string<br/>        value = string<br/>      })), [])<br/>      log_router_health_check = optional(object({<br/>        command      = optional(list(string))<br/>        interval     = optional(number)<br/>        retries      = optional(number)<br/>        start_period = optional(number)<br/>        timeout      = optional(number)<br/>        }),<br/>        {<br/>          command      = ["CMD-SHELL", "exit 0"]<br/>          interval     = 5<br/>          retries      = 3<br/>          start_period = 15<br/>          timeout      = 5<br/>        }<br/>      )<br/>      firelens_options = optional(object({<br/>        config_file_type  = optional(string)<br/>        config_file_value = optional(string)<br/>      }))<br/>      log_driver_configuration = optional(object({<br/>        host_endpoint = optional(string)<br/>        tls           = optional(bool)<br/>        compress      = optional(string)<br/>        service_name  = optional(string)<br/>        source_name   = optional(string)<br/>        message_key   = optional(string)<br/>        }),<br/>        {}<br/>      )<br/>      log_router_log_configuration = optional(object({<br/>        logDriver = optional(string, "awslogs")<br/>        options   = optional(map(string), {})<br/>        secretOptions = optional(list(object({<br/>          name      = string<br/>          valueFrom = string<br/>        })), [])<br/>        }),<br/>        {<br/>          logDriver = "awslogs"<br/>          options   = {}<br/>        }<br/>      )<br/>      mountPoints = optional(list(object({<br/>        sourceVolume : string,<br/>        containerPath : string,<br/>        readOnly : bool<br/>      })), [])<br/>      dependsOn = optional(list(object({<br/>        containerName : string,<br/>        condition : string<br/>      })), [])<br/>      }),<br/>      {}<br/>    )<br/>  })</pre> | <pre>{<br/>  "enabled": false,<br/>  "fluentbit_config": {<br/>    "is_log_router_essential": false,<br/>    "log_driver_configuration": {}<br/>  }<br/>}</pre> | no |
+| <a name="input_log_config_file_format"></a> [log\_config\_file\_format](#input\_log\_config\_file\_format) | Datadog log collection configuration file format when using S3 config bucket. Valid values are 'yaml' or 'conf'. Note: YAML format requires Fluent Bit version 3.x or higher (controlled by log\_router\_image\_tag). Version 2.x only supports 'conf' format. | `string` | `"yaml"` | no |
+| <a name="input_log_config_filters"></a> [log\_config\_filters](#input\_log\_config\_filters) | Custom filter definitions for Fluent Bit log processing. Filters can modify, enrich, or drop log records. Common filter types include grep (include/exclude), modify (add/rename/remove fields), nest (restructure data), and kubernetes (enrich with K8s metadata). See: https://docs.fluentbit.io/manual/pipeline/filters | <pre>list(object({<br/>    name  = string<br/>    match = optional(string) # Tag pattern to match (e.g., 'docker.*', 'app.logs')<br/>    # Parser filter options<br/>    parser       = optional(string)      # Parser name to apply<br/>    key_name     = optional(string)      # Field name to parse (required for parser filter)<br/>    reserve_data = optional(bool, false) # Preserve all other fields in the record<br/>    preserve_key = optional(bool, false) # Keep the original key field after parsing<br/>    unescape_key = optional(bool, false) # Unescape the key field before parsing<br/>    # Grep filter options<br/>    regex   = optional(string) # Regex pattern to match<br/>    exclude = optional(string) # Regex pattern to exclude<br/>    # Modify filter options<br/>    add_fields    = optional(map(string))  # Fields to add<br/>    rename_fields = optional(map(string))  # Fields to rename (old_name = new_name)<br/>    remove_fields = optional(list(string)) # Fields to remove<br/>    # Nest filter options<br/>    operation     = optional(string)       # nest or lift<br/>    wildcard      = optional(list(string)) # Wildcard patterns<br/>    nest_under    = optional(string)       # Target field for nesting<br/>    nested_under  = optional(string)       # Source field for lifting<br/>    remove_prefix = optional(string)       # Prefix to remove from keys<br/>    add_prefix    = optional(string)       # Prefix to add to keys<br/>  }))</pre> | `[]` | no |
+| <a name="input_log_config_parsers"></a> [log\_config\_parsers](#input\_log\_config\_parsers) | Custom parser definitions for Fluent Bit log processing. Each parser can extract and transform log data using formats like json, regex, ltsv, or logfmt. The optional filter section controls when and how the parser is applied to log records. Required for Fluent Bit v3.x YAML configurations. See: https://docs.fluentbit.io/manual/data-pipeline/parsers/configuring-parser and https://docs.fluentbit.io/manual/pipeline/filters/parser | <pre>list(object({<br/>    name   = string<br/>    format = string<br/>    # JSON parser options<br/>    time_key    = optional(string)<br/>    time_format = optional(string)<br/>    time_keep   = optional(bool)<br/>    # Regex parser options<br/>    regex = optional(string)<br/>    # LTSV parser options (tab-separated values)<br/>    # Logfmt parser options<br/>    # Decoder options<br/>    decode_field    = optional(string)<br/>    decode_field_as = optional(string)<br/>    # Type casting<br/>    types = optional(string)<br/>    # Additional options<br/>    skip_empty_values = optional(bool)<br/>    # Filter configuration - controls when and how this parser is applied<br/>    filter = optional(object({<br/>      match        = optional(string)      # Tag pattern to match (e.g., 'docker.*', 'app.logs')<br/>      key_name     = optional(string)      # Field name to parse (e.g., 'log', 'message')<br/>      reserve_data = optional(bool, false) # Preserve all other fields in the record<br/>      preserve_key = optional(bool, false) # Keep the original key field after parsing<br/>      unescape_key = optional(bool, false) # Unescape the key field before parsing<br/>    }))<br/>  }))</pre> | `[]` | no |
 | <a name="input_log_router_image"></a> [log\_router\_image](#input\_log\_router\_image) | Fluent Bit log router container image configuration. The repository should be the full image path including registry when pull\_cache\_prefix is empty, or just the repository path when using ECR pull-through cache. Default uses Amazon ECR Public. Examples: 'public.ecr.aws/aws-observability/aws-for-fluent-bit' (ECR Public, no cache), 'amazon/aws-for-fluent-bit' (Docker Hub, no cache), 'aws-observability/aws-for-fluent-bit' (with pull\_cache\_prefix='ecr-public'). The tag is specified separately in 'log\_router\_image\_tag'. | <pre>object({<br/>    repository        = optional(string, "public.ecr.aws/aws-observability/aws-for-fluent-bit")<br/>    pull_cache_prefix = optional(string, "")<br/>  })</pre> | `{}` | no |
-| <a name="input_log_router_image_tag"></a> [log\_router\_image\_tag](#input\_log\_router\_image\_tag) | Fluent Bit log router container image tag | `string` | `"stable"` | no |
+| <a name="input_log_router_image_tag"></a> [log\_router\_image\_tag](#input\_log\_router\_image\_tag) | Fluent Bit log router container image tag. Version 3.x+ supports YAML configuration files, version 2.x only supports classic .conf format. Use specific version tags (e.g., '3.2.0', '2.34.2') instead of mutable tags like 'stable' or '3' for production deployments. | `string` | `"3.2.0"` | no |
 | <a name="input_parameters"></a> [parameters](#input\_parameters) | Map of parameters for the Datadog containers, each key will be the name. When the value is set, a parameter is created. Otherwise the arn of existing parameter is added to the outputs. | <pre>map(<br/>    object({<br/>      data_type      = optional(string, "text")<br/>      description    = optional(string)<br/>      sensitive      = optional(bool, false)<br/>      tier           = optional(string, "Advanced")<br/>      value          = optional(string)<br/>      value_from_arn = optional(string)<br/>    })<br/>  )</pre> | `{}` | no |
 | <a name="input_runtime_platform"></a> [runtime\_platform](#input\_runtime\_platform) | Configuration for `runtime_platform` that containers in your task may use | <pre>object({<br/>    cpu_architecture        = optional(string, "X86_64")<br/>    operating_system_family = optional(string, "LINUX")<br/>  })</pre> | <pre>{<br/>  "cpu_architecture": "X86_64",<br/>  "operating_system_family": "LINUX"<br/>}</pre> | no |
+| <a name="input_s3_config_bucket"></a> [s3\_config\_bucket](#input\_s3\_config\_bucket) | S3 bucket configuration for storing FluentBit custom configuration files. The bucket is used to host custom parser and filter configurations that are loaded by the FluentBit init process. If the bucket uses KMS encryption, provide the KMS key ID/ARN for decrypt permissions. | <pre>object({<br/>    name       = string<br/>    kms_key_id = optional(string)<br/>  })</pre> | `null` | no |
 | <a name="input_secrets"></a> [secrets](#input\_secrets) | Map of secrets for the Datadog containers, each key will be the name. When the value is set, a secret is created. Otherwise the arn of existing secret is added to the outputs. | <pre>map(object({<br/>    value          = optional(string)<br/>    description    = optional(string)<br/>    value_from_arn = optional(string)<br/>  }))</pre> | `{}` | no |
 | <a name="input_service_name"></a> [service\_name](#input\_service\_name) | The service name for Datadog Unified Service Tagging (UST). Sets the `DD_SERVICE` environment variable and `com.datadoghq.tags.service` Docker label. Should identify the service across all environments (e.g., 'web-api', 'payment-service'). | `string` | n/a | yes |
 | <a name="input_service_version"></a> [service\_version](#input\_service\_version) | The version identifier for Datadog Unified Service Tagging (UST). Sets the `DD_VERSION` environment variable and `com.datadoghq.tags.version` Docker label. Should identify the application version (e.g., 'v1.2.3', git commit SHA). | `string` | n/a | yes |
@@ -412,6 +793,8 @@ The module's `task_role_policy_json` output includes:
 | <a name="output_datadog_containers_json"></a> [datadog\_containers\_json](#output\_datadog\_containers\_json) | All Datadog-related container definitions as a JSON-encoded string. Use this if you need a pre-encoded JSON string. |
 | <a name="output_datadog_cws_container"></a> [datadog\_cws\_container](#output\_datadog\_cws\_container) | The Datadog Cloud Workload Security instrumentation container definition as a list of objects (empty list if CWS is disabled) |
 | <a name="output_datadog_log_router_container"></a> [datadog\_log\_router\_container](#output\_datadog\_log\_router\_container) | The Datadog Log Router (Fluent Bit) container definition as a list of objects (empty list if log collection is disabled) |
+| <a name="output_filters_config_s3_key"></a> [filters\_config\_s3\_key](#output\_filters\_config\_s3\_key) | S3 object key for the FluentBit filters configuration file. Returns null if no filters are configured. |
+| <a name="output_parsers_config_s3_key"></a> [parsers\_config\_s3\_key](#output\_parsers\_config\_s3\_key) | S3 object key for the FluentBit parsers configuration file. Returns null if no custom parsers are configured. |
 | <a name="output_pull_cache_prefixes"></a> [pull\_cache\_prefixes](#output\_pull\_cache\_prefixes) | Set of unique ECR pull cache prefixes used by Datadog containers. Use this to set up ECR pull through cache rules and IAM policies in the calling module. |
 | <a name="output_pull_cache_rule_arns"></a> [pull\_cache\_rule\_arns](#output\_pull\_cache\_rule\_arns) | Map of ECR pull cache rule ARNs keyed by pull cache prefix. Use this to configure IAM policies if needed. |
 | <a name="output_pull_cache_rule_urls"></a> [pull\_cache\_rule\_urls](#output\_pull\_cache\_rule\_urls) | Map of ECR pull cache rule URLs keyed by pull cache prefix. Use this to configure container image URLs in Datadog container definitions. |

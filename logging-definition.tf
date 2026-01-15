@@ -52,7 +52,10 @@ locals {
     }
   ] : []
 
-  dd_log_environment = var.log_collection.fluentbit_config.environment != null ? var.log_collection.fluentbit_config.environment : []
+  dd_log_environment = concat(
+    var.log_collection.fluentbit_config.environment != null ? var.log_collection.fluentbit_config.environment : [],
+    local.custom_config_environment
+  )
 
   # Datadog log router container definition
   dd_log_container = local.is_fluentbit_supported ? [

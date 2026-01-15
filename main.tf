@@ -26,6 +26,14 @@ module "label" {
   attributes = ["dd"]
 }
 
+module "path" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  context   = module.label.context
+  delimiter = "/"
+}
+
 # ####################### #
 # AWS Account information #
 # ####################### #
@@ -69,8 +77,8 @@ locals {
 
   log_router_image_url = (
     var.log_router_image.pull_cache_prefix != "" ?
-    "${local.pull_cache_rule_urls[var.log_router_image.pull_cache_prefix]}${var.log_router_image.repository}:${var.log_router_image_tag}" :
-    "${var.log_router_image.repository}:${var.log_router_image_tag}"
+    "${local.pull_cache_rule_urls[var.log_router_image.pull_cache_prefix]}${var.log_router_image.repository}:${local.enable_custom_log_config && local.has_custom_parsers ? "init-" : ""}${var.log_router_image_tag}" :
+    "${var.log_router_image.repository}:${local.enable_custom_log_config && local.has_custom_parsers ? "init-" : ""}${var.log_router_image_tag}"
   )
 
   cws_image_url = (
