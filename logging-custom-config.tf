@@ -63,9 +63,9 @@ locals {
             ) if value != null && !contains(["add_fields", "rename_fields", "remove_fields"], key)
           },
           # Modify filter properties need special handling for dynamic keys
-          filter.add_fields != null ? filter.add_fields : {},
-          filter.rename_fields != null ? { for k, v in filter.rename_fields : "rename" => "${k} ${v}" } : {},
-          filter.remove_fields != null ? { for field in filter.remove_fields : "remove" => field } : {}
+          try(filter.add_fields, null) != null ? filter.add_fields : {},
+          try(filter.rename_fields, null) != null ? { for k, v in filter.rename_fields : "rename" => "${k} ${v}" } : {},
+          try(filter.remove_fields, null) != null ? { for field in filter.remove_fields : "remove" => field } : {}
         )
       ]
     }
@@ -88,16 +88,16 @@ locals {
       filter.regex != null ? ["    Regex  ${filter.regex}"] : [],
       filter.exclude != null ? ["    Exclude ${filter.exclude}"] : [],
       # Modify filter properties
-      filter.add_fields != null ? flatten([for k, v in filter.add_fields : ["    Add ${k} ${v}"]]) : [],
-      filter.rename_fields != null ? flatten([for k, v in filter.rename_fields : ["    Rename ${k} ${v}"]]) : [],
-      filter.remove_fields != null ? flatten([for field in filter.remove_fields : ["    Remove ${field}"]]) : [],
+      try(filter.add_fields, null) != null ? flatten([for k, v in filter.add_fields : ["    Add ${k} ${v}"]]) : [],
+      try(filter.rename_fields, null) != null ? flatten([for k, v in filter.rename_fields : ["    Rename ${k} ${v}"]]) : [],
+      try(filter.remove_fields, null) != null ? flatten([for field in filter.remove_fields : ["    Remove ${field}"]]) : [],
       # Nest filter properties
-      filter.operation != null ? ["    Operation ${filter.operation}"] : [],
-      filter.wildcard != null ? flatten([for pattern in filter.wildcard : ["    Wildcard ${pattern}"]]) : [],
-      filter.nest_under != null ? ["    Nest_under ${filter.nest_under}"] : [],
-      filter.nested_under != null ? ["    Nested_under ${filter.nested_under}"] : [],
-      filter.remove_prefix != null ? ["    Remove_prefix ${filter.remove_prefix}"] : [],
-      filter.add_prefix != null ? ["    Add_prefix ${filter.add_prefix}"] : []
+      try(filter.operation, null) != null ? ["    Operation ${filter.operation}"] : [],
+      try(filter.wildcard, null) != null ? flatten([for pattern in filter.wildcard : ["    Wildcard ${pattern}"]]) : [],
+      try(filter.nest_under, null) != null ? ["    Nest_under ${filter.nest_under}"] : [],
+      try(filter.nested_under, null) != null ? ["    Nested_under ${filter.nested_under}"] : [],
+      try(filter.remove_prefix, null) != null ? ["    Remove_prefix ${filter.remove_prefix}"] : [],
+      try(filter.add_prefix, null) != null ? ["    Add_prefix ${filter.add_prefix}"] : []
     ))
   ]) : ""
 
