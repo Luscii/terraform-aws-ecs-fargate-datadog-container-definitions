@@ -29,7 +29,7 @@ locals {
         for key, value in parser : key => (
           # Convert booleans to "on"/"off" strings
           key == "time_keep" || key == "skip_empty_values" ? (value ? "on" : "off") : value
-        ) if value != null && key != "filter"
+        ) if key != "filter"
       }
     ]
   }) : ""
@@ -40,14 +40,14 @@ locals {
       ["[PARSER]"],
       ["    Name   ${parser.name}"],
       ["    Format ${parser.format}"],
-      parser.time_key != null ? ["    Time_Key    ${parser.time_key}"] : [],
-      parser.time_format != null ? ["    Time_Format ${parser.time_format}"] : [],
-      parser.time_keep != null ? ["    Time_Keep   ${parser.time_keep ? "On" : "Off"}"] : [],
-      parser.regex != null ? ["    Regex  ${parser.regex}"] : [],
-      parser.decode_field != null ? ["    Decode_Field    ${parser.decode_field}"] : [],
-      parser.decode_field_as != null ? ["    Decode_Field_As ${parser.decode_field_as}"] : [],
-      parser.types != null ? ["    Types  ${parser.types}"] : [],
-      parser.skip_empty_values != null ? ["    Skip_Empty_Values ${parser.skip_empty_values ? "On" : "Off"}"] : []
+      try(parser.time_key, null) != null ? ["    Time_Key    ${parser.time_key}"] : [],
+      try(parser.time_format, null) != null ? ["    Time_Format ${parser.time_format}"] : [],
+      try(parser.time_keep, null) != null ? ["    Time_Keep   ${parser.time_keep ? "On" : "Off"}"] : [],
+      try(parser.regex, null) != null ? ["    Regex  ${parser.regex}"] : [],
+      try(parser.decode_field, null) != null ? ["    Decode_Field    ${parser.decode_field}"] : [],
+      try(parser.decode_field_as, null) != null ? ["    Decode_Field_As ${parser.decode_field_as}"] : [],
+      try(parser.types, null) != null ? ["    Types  ${parser.types}"] : [],
+      try(parser.skip_empty_values, null) != null ? ["    Skip_Empty_Values ${parser.skip_empty_values ? "On" : "Off"}"] : []
     ))
   ]) : ""
 
@@ -77,16 +77,16 @@ locals {
       ["[FILTER]"],
       ["    Name   ${filter.name}"],
       # Common properties
-      filter.match != null ? ["    Match  ${filter.match}"] : [],
+      try(filter.match, null) != null ? ["    Match  ${filter.match}"] : [],
       # Parser filter properties
-      filter.parser != null ? ["    Parser ${filter.parser}"] : [],
-      filter.key_name != null ? ["    Key_Name ${filter.key_name}"] : [],
-      filter.reserve_data != null ? ["    Reserve_Data ${filter.reserve_data ? "On" : "Off"}"] : [],
-      filter.preserve_key != null ? ["    Preserve_Key ${filter.preserve_key ? "On" : "Off"}"] : [],
-      filter.unescape_key != null ? ["    Unescape_Key ${filter.unescape_key ? "On" : "Off"}"] : [],
+      try(filter.parser, null) != null ? ["    Parser ${filter.parser}"] : [],
+      try(filter.key_name, null) != null ? ["    Key_Name ${filter.key_name}"] : [],
+      try(filter.reserve_data, null) != null ? ["    Reserve_Data ${filter.reserve_data ? "On" : "Off"}"] : [],
+      try(filter.preserve_key, null) != null ? ["    Preserve_Key ${filter.preserve_key ? "On" : "Off"}"] : [],
+      try(filter.unescape_key, null) != null ? ["    Unescape_Key ${filter.unescape_key ? "On" : "Off"}"] : [],
       # Grep filter properties
-      filter.regex != null ? ["    Regex  ${filter.regex}"] : [],
-      filter.exclude != null ? ["    Exclude ${filter.exclude}"] : [],
+      try(filter.regex, null) != null ? ["    Regex  ${filter.regex}"] : [],
+      try(filter.exclude, null) != null ? ["    Exclude ${filter.exclude}"] : [],
       # Modify filter properties
       try(filter.add_fields, null) != null ? flatten([for k, v in filter.add_fields : ["    Add ${k} ${v}"]]) : [],
       try(filter.rename_fields, null) != null ? flatten([for k, v in filter.rename_fields : ["    Rename ${k} ${v}"]]) : [],
@@ -137,9 +137,9 @@ data "aws_s3_bucket" "config" {
 }
 
 data "aws_kms_key" "config_bucket" {
-  count = local.enable_custom_log_config && var.s3_config_bucket.kms_key_id != null ? 1 : 0
+  count = local.enable_custom_log_config && var.s3_config_bucket != null && try(var.s3_config_bucket.kms_key_id, null) != null ? 1 : 0
 
-  key_id = var.s3_config_bucket.kms_key_id
+  key_id = var.s3_config_bucket != null ? var.s3_config_bucket.kms_key_id : null
 }
 
 # Upload parsers configuration to S3
