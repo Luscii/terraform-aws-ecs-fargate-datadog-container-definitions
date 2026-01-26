@@ -537,19 +537,19 @@ variable "log_config_filters" {
     preserve_key = optional(bool, false) # Keep the original key field after parsing
     unescape_key = optional(bool, false) # Unescape the key field before parsing
     # Grep filter options
-    regex   = optional(string) # Regex pattern to match
-    exclude = optional(string) # Regex pattern to exclude
+    regex   = optional(string, null) # Regex pattern to match
+    exclude = optional(string, null) # Regex pattern to exclude
     # Modify filter options
-    add_fields    = optional(map(string))  # Fields to add
-    rename_fields = optional(map(string))  # Fields to rename (old_name = new_name)
-    remove_fields = optional(list(string)) # Fields to remove
+    add_fields    = optional(map(string), null)  # Fields to add
+    rename_fields = optional(map(string), null)  # Fields to rename (old_name = new_name)
+    remove_fields = optional(list(string), null) # Fields to remove
     # Nest filter options
-    operation     = optional(string)       # nest or lift
-    wildcard      = optional(list(string)) # Wildcard patterns
-    nest_under    = optional(string)       # Target field for nesting
-    nested_under  = optional(string)       # Source field for lifting
-    remove_prefix = optional(string)       # Prefix to remove from keys
-    add_prefix    = optional(string)       # Prefix to add to keys
+    operation     = optional(string, null)       # nest or lift
+    wildcard      = optional(list(string), null) # Wildcard patterns
+    nest_under    = optional(string, null)       # Target field for nesting
+    nested_under  = optional(string, null)       # Source field for lifting
+    remove_prefix = optional(string, null)       # Prefix to remove from keys
+    add_prefix    = optional(string, null)       # Prefix to add to keys
   }))
   default = []
 
