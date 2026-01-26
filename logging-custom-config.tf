@@ -27,9 +27,11 @@ locals {
     parsers = [
       for parser in var.log_config_parsers : {
         for key, value in parser : key => (
-          # Convert booleans to "on"/"off" strings
-          key == "time_keep" || key == "skip_empty_values" ? (value ? "on" : "off") : value
-        ) if key != "filter"
+          # Convert booleans to "on"/"off" strings, but only if value is not null
+          key == "time_keep" || key == "skip_empty_values"
+          ? (value != null ? (value ? "on" : "off") : null)
+          : value
+        ) if value != null && key != "filter"
       }
     ]
   }) : ""
