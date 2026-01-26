@@ -27,7 +27,7 @@ jobs:
         with:
           dx_instance: 'luscii'  # for luscii.getdx.net
           bearer: ${{ secrets.DX_BEARER_TOKEN }}
-          service: 'tf-{name}-module'
+          service: 'terraform-aws-ecs-fargate-datadog-container-definitions'
           environment: 'production'
           reference_id: ${{ github.run_id }}
           source_url: ${{ steps.get-release.outputs.url }}
