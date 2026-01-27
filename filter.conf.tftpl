@@ -25,9 +25,6 @@
 %{~ if filter.exclude != null }
     Exclude ${filter.exclude}
 %{ endif ~}
-%{~ if filter.logical_op != null }
-    Logical_Op ${filter.logical_op}
-%{ endif ~}
 %{ endif ~}
     # Modify filter
 %{~ if filter.name == "modify" }
