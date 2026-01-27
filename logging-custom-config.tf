@@ -38,9 +38,11 @@ locals {
 
   # Generate classic .conf parser configuration using templatefile
   conf_parsers_config = local.has_custom_parsers ? join("\n\n", [
-    for parser in var.log_config_parsers : templatefile("${path.module}/parser.conf.tftpl", {
-      parser = parser
-    })
+    for parser in var.log_config_parsers : replace(
+      templatefile("${path.module}/parser.conf.tftpl", { parser = parser }),
+      "\n{2,}",
+      "\n"
+    )
   ]) : ""
 
   # Generate YAML filter configuration for all filters
@@ -65,9 +67,11 @@ locals {
 
   # Generate classic .conf filter configuration for all filters using templatefile
   conf_filters_config = local.has_filters ? join("\n\n", [
-    for filter in local.all_filters : templatefile("${path.module}/filter.conf.tftpl", {
-      filter = filter
-    })
+    for filter in local.all_filters : replace(
+      templatefile("${path.module}/filter.conf.tftpl", { filter = filter }),
+      "\n{2,}",
+      "\n"
+    )
   ]) : ""
 
   # Combined configuration based on format
