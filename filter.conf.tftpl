@@ -1,0 +1,77 @@
+[FILTER]
+    Name   ${filter.name}
+%{ if filter.match != null }
+    Match  ${filter.match}
+%{ endif }
+
+# Parser filter
+%{ if filter.name == "parser" }
+%{ if filter.parser != null }
+    Parser ${filter.parser}
+%{ endif }
+%{ if filter.key_name != null }
+    Key_Name ${filter.key_name}
+%{ endif }
+%{ if filter.reserve_data != null }
+    Reserve_Data ${filter.reserve_data ? "On" : "Off"}
+%{ endif }
+%{ if filter.preserve_key != null }
+    Preserve_Key ${filter.preserve_key ? "On" : "Off"}
+%{ endif }
+%{ if filter.unescape_key != null }
+    Unescape_Key ${filter.unescape_key ? "On" : "Off"}
+%{ endif }
+%{ endif }
+
+# Grep filter
+%{ if filter.name == "grep" }
+%{ if filter.regex != null }
+    Regex  ${filter.regex}
+%{ endif }
+%{ if filter.exclude != null }
+    Exclude ${filter.exclude}
+%{ endif }
+%{ endif }
+
+# Modify filter
+%{ if filter.name == "modify" }
+%{ if filter.add_fields != null }
+%{ for k, v in filter.add_fields }
+    Add ${k} ${v}
+%{ endfor }
+%{ endif }
+%{ if filter.rename_fields != null }
+%{ for k, v in filter.rename_fields }
+    Rename ${k} ${v}
+%{ endfor }
+%{ endif }
+%{ if filter.remove_fields != null }
+%{ for field in filter.remove_fields }
+    Remove ${field}
+%{ endfor }
+%{ endif }
+%{ endif }
+
+# Nest filter
+%{ if filter.name == "nest" }
+%{ if filter.operation != null }
+    Operation ${filter.operation}
+%{ endif }
+%{ if filter.wildcard != null }
+%{ for pattern in filter.wildcard }
+    Wildcard ${pattern}
+%{ endfor }
+%{ endif }
+%{ if filter.nest_under != null }
+    Nest_under ${filter.nest_under}
+%{ endif }
+%{ if filter.nested_under != null }
+    Nested_under ${filter.nested_under}
+%{ endif }
+%{ if filter.remove_prefix != null }
+    Remove_prefix ${filter.remove_prefix}
+%{ endif }
+%{ if filter.add_prefix != null }
+    Add_prefix ${filter.add_prefix}
+%{ endif }
+%{ endif }
