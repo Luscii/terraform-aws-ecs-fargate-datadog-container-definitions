@@ -1,0 +1,27 @@
+[PARSER]
+    Name   ${parser.name}
+    Format ${parser.format}
+%{ if parser.time_key != null }
+    Time_Key    ${parser.time_key}
+%{ endif }
+%{ if parser.time_format != null }
+    Time_Format ${parser.time_format}
+%{ endif }
+%{ if parser.time_keep != null }
+    Time_Keep   ${parser.time_keep ? "On" : "Off"}
+%{ endif }
+%{ if parser.regex != null }
+    Regex  ${parser.regex}
+%{ endif }
+%{ if parser.decode_field != null }
+    Decode_Field    ${parser.decode_field}
+%{ endif }
+%{ if parser.decode_field_as != null }
+    Decode_Field_As ${parser.decode_field_as}
+%{ endif }
+%{ if parser.types != null }
+    Types  ${parser.types}
+%{ endif }
+%{ if parser.skip_empty_values != null }
+    Skip_Empty_Values ${parser.skip_empty_values ? "On" : "Off"}
+%{ endif }

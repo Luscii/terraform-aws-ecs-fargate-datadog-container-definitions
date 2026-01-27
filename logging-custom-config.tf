@@ -36,21 +36,11 @@ locals {
     ]
   }) : ""
 
-  # Generate classic .conf parser configuration
+  # Generate classic .conf parser configuration using templatefile
   conf_parsers_config = local.has_custom_parsers ? join("\n\n", [
-    for parser in var.log_config_parsers : join("\n", concat(
-      ["[PARSER]"],
-      ["    Name   ${parser.name}"],
-      ["    Format ${parser.format}"],
-      try(parser.time_key, null) != null ? ["    Time_Key    ${parser.time_key}"] : [],
-      try(parser.time_format, null) != null ? ["    Time_Format ${parser.time_format}"] : [],
-      try(parser.time_keep, null) != null ? ["    Time_Keep   ${parser.time_keep ? "On" : "Off"}"] : [],
-      try(parser.regex, null) != null ? ["    Regex  ${parser.regex}"] : [],
-      try(parser.decode_field, null) != null ? ["    Decode_Field    ${parser.decode_field}"] : [],
-      try(parser.decode_field_as, null) != null ? ["    Decode_Field_As ${parser.decode_field_as}"] : [],
-      try(parser.types, null) != null ? ["    Types  ${parser.types}"] : [],
-      try(parser.skip_empty_values, null) != null ? ["    Skip_Empty_Values ${parser.skip_empty_values ? "On" : "Off"}"] : []
-    ))
+    for parser in var.log_config_parsers : templatefile("${path.module}/parser.conf.tftpl", {
+      parser = parser
+    })
   ]) : ""
 
   # Generate YAML filter configuration for all filters
@@ -73,34 +63,11 @@ locals {
     }
   }) : ""
 
-  # Generate classic .conf filter configuration for all filters
+  # Generate classic .conf filter configuration for all filters using templatefile
   conf_filters_config = local.has_filters ? join("\n\n", [
-    for filter in local.all_filters : join("\n", concat(
-      ["[FILTER]"],
-      ["    Name   ${filter.name}"],
-      # Common properties
-      try(filter.match, null) != null ? ["    Match  ${filter.match}"] : [],
-      # Parser filter properties
-      try(filter.parser, null) != null ? ["    Parser ${filter.parser}"] : [],
-      try(filter.key_name, null) != null ? ["    Key_Name ${filter.key_name}"] : [],
-      try(filter.reserve_data, null) != null ? ["    Reserve_Data ${filter.reserve_data ? "On" : "Off"}"] : [],
-      try(filter.preserve_key, null) != null ? ["    Preserve_Key ${filter.preserve_key ? "On" : "Off"}"] : [],
-      try(filter.unescape_key, null) != null ? ["    Unescape_Key ${filter.unescape_key ? "On" : "Off"}"] : [],
-      # Grep filter properties
-      try(filter.regex, null) != null ? ["    Regex  ${filter.regex}"] : [],
-      try(filter.exclude, null) != null ? ["    Exclude ${filter.exclude}"] : [],
-      # Modify filter properties
-      try(filter.add_fields, null) != null ? flatten([for k, v in filter.add_fields : ["    Add ${k} ${v}"]]) : [],
-      try(filter.rename_fields, null) != null ? flatten([for k, v in filter.rename_fields : ["    Rename ${k} ${v}"]]) : [],
-      try(filter.remove_fields, null) != null ? flatten([for field in filter.remove_fields : ["    Remove ${field}"]]) : [],
-      # Nest filter properties
-      try(filter.operation, null) != null ? ["    Operation ${filter.operation}"] : [],
-      try(filter.wildcard, null) != null ? flatten([for pattern in filter.wildcard : ["    Wildcard ${pattern}"]]) : [],
-      try(filter.nest_under, null) != null ? ["    Nest_under ${filter.nest_under}"] : [],
-      try(filter.nested_under, null) != null ? ["    Nested_under ${filter.nested_under}"] : [],
-      try(filter.remove_prefix, null) != null ? ["    Remove_prefix ${filter.remove_prefix}"] : [],
-      try(filter.add_prefix, null) != null ? ["    Add_prefix ${filter.add_prefix}"] : []
-    ))
+    for filter in local.all_filters : templatefile("${path.module}/filter.conf.tftpl", {
+      filter = filter
+    })
   ]) : ""
 
   # Combined configuration based on format
