@@ -47,6 +47,12 @@ variable "context" {
   }
 }
 
+variable "attributes" {
+  description = "List of attributes to include in resource names. Overrides attributes set in 'context' variable."
+  type        = list(string)
+  default     = []
+}
+
 ################################################################################
 # Datadog ECS Fargate Configuration
 ################################################################################

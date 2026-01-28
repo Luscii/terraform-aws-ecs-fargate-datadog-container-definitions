@@ -23,7 +23,7 @@ module "label" {
 
   context    = var.context
   stage      = var.stage
-  attributes = ["dd"]
+  attributes = distinct(concat(var.attributes, ["datadog", var.ecs_cluster_name]))
 }
 
 module "path" {
