@@ -717,7 +717,7 @@ The module's `task_role_policy_json` output includes:
 |------|--------|---------|
 | <a name="module_label"></a> [label](#module\_label) | cloudposse/label/null | 0.25.0 |
 | <a name="module_path"></a> [path](#module\_path) | cloudposse/label/null | 0.25.0 |
-| <a name="module_service_secrets"></a> [service\_secrets](#module\_service\_secrets) | github.com/Luscii/terraform-aws-service-secrets | 1.2.1 |
+| <a name="module_service_secrets"></a> [service\_secrets](#module\_service\_secrets) | github.com/Luscii/terraform-aws-service-secrets | 1.2.2 |
 
 ### Resources
 
