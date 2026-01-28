@@ -100,12 +100,17 @@ locals {
 
   dd_linux_param_capabilities = local.cmn_linux_param_capability_sys_ptrace ? { add = ["SYS_PTRACE"] } : {}
 
-  dd_linux_parameters = local.is_linux ? merge(
-    try(var.agent_linux_parameters, {}),
-    length(keys(local.dd_linux_param_capabilities)) > 0 ? {
-      capabilities = local.dd_linux_param_capabilities
-    } : {}
-  ) : {}
+  dd_linux_parameters = jsondecode(
+    local.is_linux ? jsonencode(
+      merge(
+        try(var.agent_linux_parameters, {}),
+        jsondecode(length(keys(local.dd_linux_param_capabilities)) > 0 ? jsonencode({
+          capabilities = local.dd_linux_param_capabilities
+          }) : jsonencode({})
+        )
+      )
+    ) : jsonencode({})
+  )
 
   # Datadog Agent container definition
   dd_agent_container = concat(
