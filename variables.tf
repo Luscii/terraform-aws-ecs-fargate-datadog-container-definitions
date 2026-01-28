@@ -666,3 +666,34 @@ variable "container_mount_path_prefix" {
   default     = "/var/run/"
   nullable    = false
 }
+
+variable "enable_cloud_network_monitoring" {
+  description = <<-EOT
+    Enable Cloud Network Monitoring (CNM) for enhanced network visibility.
+    Requires Datadog Agent version 7.32.0+ and appropriate permissions.
+    See: https://docs.datadoghq.com/network_monitoring/cloud_network_monitoring/setup
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "agent_linux_parameters" {
+  description = <<-EOT
+    Linux-specific parameters for the Datadog Agent container.
+    Selected parameters are supported by AWS Fargate.
+    See: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_LinuxParameters.html
+  EOT
+  type = object({
+    capabilities = optional(object({
+      add  = optional(list(string))
+      drop = optional(list(string))
+    }))
+    devices = optional(list(object({
+      hostPath      = string
+      containerPath = string
+      permissions   = optional(list(string))
+    })))
+    initProcessEnabled = optional(bool)
+  })
+  default = {}
+}
