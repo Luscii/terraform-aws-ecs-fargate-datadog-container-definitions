@@ -95,6 +95,9 @@ output "filters_config_s3_key" {
 output "dd_api_key_secret_arn" {
   description = "The ARN of the Secrets Manager secret containing the Datadog API key, if configured."
   value       = local.dd_api_key_secret_arn
+
+  # The ARN in itself is not sensitive, but it points to a secret
+  sensitive = true
 }
 
 output "dd_api_key_kms_key_id" {
