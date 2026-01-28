@@ -87,3 +87,17 @@ output "filters_config_s3_key" {
   description = "S3 object key for the FluentBit filters configuration file. Returns null if no filters are configured."
   value       = local.enable_custom_log_config && local.has_filters ? local.filters_config_key : null
 }
+
+################################################################################
+# API Key Secret ARN Output
+################################################################################
+
+output "dd_api_key_secret_arn" {
+  description = "The ARN of the Secrets Manager secret containing the Datadog API key, if configured."
+  value       = local.dd_api_key_secret_arn
+}
+
+output "dd_api_key_kms_key_id" {
+  description = "The KMS key ID used to encrypt the Datadog API key secret, if configured."
+  value       = var.kms_key_id
+}
