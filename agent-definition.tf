@@ -85,6 +85,7 @@ locals {
     local.origin_detection_vars,
     local.cws_vars,
     local.dd_environment,
+    local.cmn_environment
   )
 
   dd_agent_dependency = concat(
@@ -96,6 +97,15 @@ locals {
     ] : [],
     try(var.log_collection.fluentbit_config.is_log_router_dependency_enabled, false) && local.dd_firelens_log_configuration != null ? local.log_router_dependency : [],
   )
+
+  dd_linux_param_capabilities = local.cmn_linux_param_capability_sys_ptrace ? { add = ["SYS_PTRACE"] } : {}
+
+  dd_linux_parameters = local.is_linux ? merge(
+    try(var.agent_linux_parameters, {}),
+    length(keys(local.dd_linux_param_capabilities)) > 0 ? {
+      capabilities = local.dd_linux_param_capabilities
+    } : {}
+  ) : {}
 
   # Datadog Agent container definition
   dd_agent_container = concat(
@@ -148,6 +158,7 @@ locals {
           dependsOn        = local.dd_agent_dependency
           systemControls   = []
           volumesFrom      = []
+          linuxParameters  = local.dd_linux_parameters
         },
         try(var.agent_health_check.command == null, true) ? {} : {
           healthCheck = {
