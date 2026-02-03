@@ -56,6 +56,8 @@ locals {
               key == "reserve_data" || key == "preserve_key" || key == "unescape_key" ? (value ? "on" : "off") : value
             ) if value != null && !contains(["add_fields", "rename_fields", "remove_fields"], key)
           },
+          # Default match pattern to "*" if not specified (Fluent Bit requires Match directive)
+          try(filter.match, null) == null ? { match = "*" } : {},
           # Modify filter properties need special handling for dynamic keys
           try(filter.add_fields, null) != null ? filter.add_fields : {},
           try(filter.rename_fields, null) != null ? { for k, v in filter.rename_fields : "rename" => "${k} ${v}" } : {},

@@ -369,9 +369,11 @@ module "datadog_containers" {
 
   # Custom filters for transforming and enriching logs
   log_config_filters = [
-    # Add environment metadata
+    # Add environment metadata to all logs
+    # Note: match = "*" applies to all logs (Fluent Bit uses * for all, Fluentd uses **)
     {
-      name = "modify"
+      name  = "modify"
+      match = "*" # Apply to all logs (defaults to "*" if omitted)
       add_fields = {
         environment = "production"
         service     = "my-service"
@@ -386,6 +388,7 @@ module "datadog_containers" {
     # Nest Kubernetes metadata
     {
       name          = "nest"
+      match         = "*" # Apply to all logs
       operation     = "nest"
       wildcard      = ["kubernetes_*"]
       nest_under    = "kubernetes"
@@ -423,6 +426,39 @@ When custom parsers or filters are configured, the module automatically:
    - `aws_fluent_bit_init_s3_2` → filters config S3 ARN
 
 The FluentBit container downloads and loads these configurations on startup. See [AWS for Fluent Bit init process documentation](https://github.com/aws/aws-for-fluent-bit/blob/mainline/troubleshooting/debugging.md#using-init-tag-for-debug) for more details.
+
+### FluentBit Tag Pattern Matching
+
+FluentBit filters use tag patterns to determine which log records they process. Understanding pattern matching is crucial for effective log processing:
+
+**Pattern Syntax:**
+- `*` - Matches all tags (e.g., `match = "*"` applies filter to all logs)
+- `docker.*` - Matches tags starting with "docker." (e.g., docker.container-name)
+- `app.logs` - Matches exact tag "app.logs"
+
+**Important:** This module uses **FluentBit**, which uses single asterisk (`*`) for matching all tags. If you were using **Fluentd** instead, you would need double asterisk (`**`) for the same purpose. See the [AWS FireLens blog post](https://aws.amazon.com/blogs/containers/under-the-hood-firelens-for-amazon-ecs-tasks/) for more details.
+
+**Default Behavior:**
+- If you don't specify a `match` pattern for a filter, it defaults to `*` (applies to all logs)
+- This ensures filters work as expected without requiring explicit pattern specification
+- You can override the default by explicitly setting `match` to target specific log streams
+
+**Common Patterns:**
+```hcl
+# Apply to all logs
+match = "*"
+
+# Apply to Docker container logs
+match = "docker.*"
+
+# Apply to specific container
+match = "docker.my-container-name"
+
+# Apply to application logs
+match = "app.*"
+```
+
+For more information, see [FluentBit Tag and Match Pattern Documentation](https://docs.fluentbit.io/manual/concepts/key-concepts#tag-and-match).
 
 ### Parser Options
 
@@ -494,7 +530,8 @@ Supported filter types:
 **Modify Filter** (add/rename/remove fields):
 ```hcl
 {
-  name = "modify"
+  name  = "modify"
+  match = "*"  # Apply to all logs (default)
   add_fields = {
     environment = "production"
     region      = "us-east-1"
@@ -510,6 +547,7 @@ Supported filter types:
 ```hcl
 {
   name          = "nest"
+  match         = "*"  # Apply to all logs
   operation     = "nest"           # or "lift"
   wildcard      = ["prefix_*"]
   nest_under    = "nested_object"

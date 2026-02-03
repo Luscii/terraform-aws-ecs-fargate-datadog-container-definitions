@@ -33,15 +33,20 @@ The example configures three filters:
 1. **Modify Filter**:
    - Adds environment metadata to all logs (environment, service, region)
    - Enriches logs with deployment context
+   - Uses `match = "*"` to apply to all log streams (Fluent Bit pattern)
 
 2. **Grep Filter**:
    - Excludes health check logs to reduce noise
    - Uses regex pattern matching on Docker logs
+   - Uses `match = "docker.*"` to target only Docker container logs
 
 3. **Nest Filter**:
    - Groups Kubernetes metadata fields under a single `kubernetes` object
    - Removes `kubernetes_` prefix from nested fields
    - Creates cleaner log structure
+   - Uses `match = "*"` to apply to all logs
+
+**Important:** Fluent Bit uses `*` for matching all log streams, while Fluentd uses `**`. This module is configured for Fluent Bit.
 
 ## Configuration Files
 
@@ -147,6 +152,7 @@ pipeline:
       reserve_data: "on"
 
     - name: modify
+      match: "*"  # Apply to all logs (Fluent Bit pattern)
       environment: dev
       service: my-service
       region: us-east-1
@@ -156,12 +162,15 @@ pipeline:
       exclude: health
 
     - name: nest
+      match: "*"  # Apply to all logs
       operation: nest
       wildcard:
         - "kubernetes_*"
       nest_under: kubernetes
       remove_prefix: "kubernetes_"
 ```
+
+**Note:** Fluent Bit uses single asterisk (`*`) to match all tags. If you were using Fluentd instead, you would need to use double asterisk (`**`).
 
 ## FluentBit Version
 
@@ -200,8 +209,10 @@ aws s3 cp s3://$(terraform output -raw config_bucket)/$(terraform output -raw fi
 
 ## References
 
+- [AWS FireLens for Amazon ECS Tasks - Under the Hood](https://aws.amazon.com/blogs/containers/under-the-hood-firelens-for-amazon-ecs-tasks/)
 - [FluentBit Parsers Documentation](https://docs.fluentbit.io/manual/data-pipeline/parsers/configuring-parser)
 - [FluentBit Filters Documentation](https://docs.fluentbit.io/manual/pipeline/filters)
+- [FluentBit Tag and Match Pattern Documentation](https://docs.fluentbit.io/manual/concepts/key-concepts#tag-and-match)
 - [AWS for Fluent Bit Init Process](https://github.com/aws/aws-for-fluent-bit/blob/mainline/troubleshooting/debugging.md#using-init-tag-for-debug)
 - [FluentBit Parser Filter](https://docs.fluentbit.io/manual/pipeline/filters/parser)
 - [FluentBit Modify Filter](https://docs.fluentbit.io/manual/pipeline/filters/modify)
