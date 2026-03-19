@@ -525,7 +525,7 @@ variable "log_config_parsers" {
   validation {
     condition = alltrue([
       for parser in var.log_config_parsers :
-      parser.filter == null || parser.filter.key_name != null
+      parser.filter == null || try(parser.filter.key_name, null) != null
     ])
     error_message = "When filter is specified, 'key_name' is required to identify which field to parse"
   }
