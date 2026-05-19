@@ -1,44 +1,44 @@
 [FILTER]
     Name   ${filter.name}
-%{ if filter.match != null }    Match  ${filter.match}%{ endif }
+    Match  ${try(filter.match, "*")}
 
     # Parser filter
 %{~ if filter.name == "parser" }
-%{~ if filter.parser != null }
+%{~ if try(filter.parser, null) != null }
     Parser ${filter.parser}
 %{ endif ~}
-%{~ if filter.key_name != null }
+%{~ if try(filter.key_name, null) != null }
     Key_Name ${filter.key_name}
 %{ endif ~}
-%{~ if filter.reserve_data != null }
+%{~ if try(filter.reserve_data, null) != null }
     Reserve_Data ${filter.reserve_data ? "On" : "Off"}
 %{ endif ~}
-%{~ if filter.preserve_key != null }
+%{~ if try(filter.preserve_key, null) != null }
     Preserve_Key ${filter.preserve_key ? "On" : "Off"}
 %{ endif ~}
 %{ endif ~}
     # Grep filter
 %{~ if filter.name == "grep" }
-%{~ if filter.regex != null }
+%{~ if try(filter.regex, null) != null }
     Regex  ${filter.regex}
 %{ endif ~}
-%{~ if filter.exclude != null }
+%{~ if try(filter.exclude, null) != null }
     Exclude ${filter.exclude}
 %{ endif ~}
 %{ endif ~}
     # Modify filter
 %{~ if filter.name == "modify" }
-%{~ if filter.add_fields != null }
+%{~ if try(filter.add_fields, null) != null }
 %{~ for k, v in filter.add_fields }
     Add ${k} ${v}
 %{ endfor ~}
 %{ endif ~}
-%{~ if filter.rename_fields != null }
+%{~ if try(filter.rename_fields, null) != null }
 %{~ for k, v in filter.rename_fields }
     Rename ${k} ${v}
 %{ endfor ~}
 %{ endif ~}
-%{~ if filter.remove_fields != null }
+%{~ if try(filter.remove_fields, null) != null }
 %{~ for field in filter.remove_fields }
     Remove ${field}
 %{ endfor ~}
@@ -47,24 +47,24 @@
 
     # Nest filter
 %{~ if filter.name == "nest" }
-%{~ if filter.operation != null }
+%{~ if try(filter.operation, null) != null }
     Operation ${filter.operation}
 %{ endif ~}
-%{~ if filter.wildcard != null }
+%{~ if try(filter.wildcard, null) != null }
 %{~ for pattern in filter.wildcard }
     Wildcard ${pattern}
 %{ endfor ~}
 %{ endif ~}
-%{~ if filter.nest_under != null }
+%{~ if try(filter.nest_under, null) != null }
     Nest_under ${filter.nest_under}
 %{ endif ~}
-%{~ if filter.nested_under != null }
+%{~ if try(filter.nested_under, null) != null }
     Nested_under ${filter.nested_under}
 %{ endif ~}
-%{~ if filter.remove_prefix != null }
+%{~ if try(filter.remove_prefix, null) != null }
     Remove_prefix ${filter.remove_prefix}
 %{ endif ~}
-%{~ if filter.add_prefix != null }
+%{~ if try(filter.add_prefix, null) != null }
     Add_prefix ${filter.add_prefix}
 %{ endif ~}
 %{ endif ~}

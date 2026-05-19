@@ -99,8 +99,10 @@ module "datadog_container_definitions" {
   # Custom filters for log enrichment and transformation
   log_config_filters = [
     # Add environment tags to all logs
+    # Note: match = "*" applies filter to all log streams (Fluent Bit single asterisk pattern)
     {
-      name = "modify"
+      name  = "modify"
+      match = "*" # Apply to all logs (Fluent Bit uses * for all, Fluentd would use **)
       add_fields = {
         environment = var.environment
         service     = var.service_name
@@ -116,6 +118,7 @@ module "datadog_container_definitions" {
     # Nest Kubernetes metadata
     {
       name          = "nest"
+      match         = "*" # Apply to all logs
       operation     = "nest"
       wildcard      = ["kubernetes_*"]
       nest_under    = "kubernetes"
