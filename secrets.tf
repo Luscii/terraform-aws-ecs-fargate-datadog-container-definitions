@@ -18,7 +18,7 @@ locals {
 
 # Use terraform-aws-service-secrets module to manage the Datadog API key secret
 module "service_secrets" {
-  source = "github.com/Luscii/terraform-aws-service-secrets?ref=1.2.2"
+  source = "github.com/Luscii/terraform-aws-service-secrets?ref=1.2.3"
 
   context = module.label.context
 
