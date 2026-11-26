@@ -497,7 +497,7 @@ variable "log_config_parsers" {
     skip_empty_values = optional(bool)
     # Filter configuration - controls when and how this parser is applied
     filter = optional(object({
-      match        = optional(string)      # Tag pattern to match (e.g., 'docker.*', 'app.logs')
+      match        = optional(string)      # Tag pattern to match (e.g., 'docker.*', 'app.logs', or '*' for all logs in Fluent Bit)
       key_name     = optional(string)      # Field name to parse (e.g., 'log', 'message')
       reserve_data = optional(bool, false) # Preserve all other fields in the record
       preserve_key = optional(bool, false) # Keep the original key field after parsing
@@ -535,7 +535,7 @@ variable "log_config_filters" {
   description = "Custom filter definitions for Fluent Bit log processing. Filters can modify, enrich, or drop log records. Common filter types include grep (include/exclude), modify (add/rename/remove fields), nest (restructure data), and kubernetes (enrich with K8s metadata). See: https://docs.fluentbit.io/manual/pipeline/filters"
   type = list(object({
     name  = string
-    match = optional(string) # Tag pattern to match (e.g., 'docker.*', 'app.logs')
+    match = optional(string) # Tag pattern to match (e.g., 'docker.*', 'app.logs', or '*' for all logs in Fluent Bit). Defaults to '*' if not specified.
     # Parser filter options
     parser       = optional(string)      # Parser name to apply
     key_name     = optional(string)      # Field name to parse (required for parser filter)
